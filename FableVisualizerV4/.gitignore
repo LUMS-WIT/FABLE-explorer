@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+all_pathways_run_*/
+exports/
+plotly_batch/
+plotly_curated/
+plotly_dashboard/
+plotly_deviation/
+scenario_deviation_analysis/
+FableVisualizerV4_AllPathwaysRunner.zip
