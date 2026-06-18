@@ -1,0 +1,15 @@
+# Core dependencies
+openpyxl>=3.1
+pandas>=2.0
+plotly>=5.0
+streamlit>=1.30
+
+# Windows only — required for Excel COM automation (src/runner.py)
+# Install manually on Windows: pip install pywin32>=306
+# pywin32>=306
+
+# Optional: Jupyter notebook support (notebooks/runner.ipynb)
+# pip install fable-pakistan[notebook]
+# jupyter>=1.0
+# ipykernel>=6.0
+# numpy>=1.24

@@ -1,6 +1,15 @@
+# Python
 __pycache__/
 *.pyc
+*.pyo
 .ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# FABLE run outputs (large, generated)
 all_pathways_run_*/
 exports/
 plotly_batch/
@@ -8,4 +17,20 @@ plotly_curated/
 plotly_dashboard/
 plotly_deviation/
 scenario_deviation_analysis/
+
+# Temp / build artifacts
 FableVisualizerV4_AllPathwaysRunner.zip
+*.log
+
+# Excel temp files
+~$*.xlsx
+~$*.xlsm
+~$*.xls
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / env
+.env
+*.env

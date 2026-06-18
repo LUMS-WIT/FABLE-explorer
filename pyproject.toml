@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fable-pakistan"
+version = "0.1.0"
+description = "Post-processing and visualization tools for FABLE Pakistan pathway outputs"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+
+dependencies = [
+    "openpyxl>=3.1",
+    "pandas>=2.0",
+    "plotly>=5.0",
+    "streamlit>=1.30",
+    # Windows only — required for Excel COM automation (runner.py)
+    "pywin32>=306; sys_platform == 'win32'",
+]
+
+[project.optional-dependencies]
+notebook = [
+    "jupyter>=1.0",
+    "ipykernel>=6.0",
+    "numpy>=1.24",
+]
+dev = [
+    "pytest>=7.0",
+    "pyright>=1.1",
+]
+
+[project.urls]
+Repository = "https://github.com/FABLE-Consortium/FABLE_Pakistan"
+
+[tool.setuptools]
+# No installable Python packages — project provides runnable scripts in src/
+packages = []
+
+[tool.pyright]
+extraPaths = ["src"]
+pythonVersion = "3.9"

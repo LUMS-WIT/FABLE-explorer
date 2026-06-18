@@ -2,14 +2,18 @@
 """
 run_fable_analysis.py — End-to-end FABLE pipeline runner
 
+NOTE: This file is a work-in-progress and cannot be run yet.
+      It requires the FableReportGen module (not yet in this repo).
+      Use FableVisualizerV4_Launcher.py or the .bat files instead.
+
 Steps:
   1. Finds the .xlsx/.xlsm workbook in this folder (or pass --workbook)
   2. Runs every pathway through Excel and exports combined CSVs
      (via FableVisualizerV4_AllPathwaysRunner)
   3. Generates 10 PNGs + detailed_metrics.csv + ai_briefing.md
-     (via FableReportGen)
+     (via FableReportGen — pending)
 
-Usage:
+Usage (once FableReportGen is added):
   python run_fable_analysis.py
   python run_fable_analysis.py --workbook "path/to/file.xlsx"
   python run_fable_analysis.py --max-pathways 2   # quick test
@@ -26,23 +30,23 @@ from pathlib import Path
 
 # ── Resolve directories ────────────────────────────────────────────────────
 _HERE = Path(__file__).parent.resolve()
-_VISUALIZER_DIR = _HERE / "FableVisualizerV4"
-_REPORTGEN_DIR  = _HERE / "FableReportGen"
+_SRC_DIR       = _HERE / "src"
+_REPORTGEN_DIR = _HERE / "FableReportGen"  # pending — module not yet in repo
 
-for _d in (_VISUALIZER_DIR, _REPORTGEN_DIR):
+for _d in (_SRC_DIR, _REPORTGEN_DIR):
     if str(_d) not in sys.path:
         sys.path.insert(0, str(_d))
 
 # ── Imports from sub-modules ───────────────────────────────────────────────
-from FableVisualizerV4_AllPathwaysRunner import run_all_pathways  # noqa: E402
-from FableReportGen import (                                       # noqa: E402
+from runner import run_all_pathways  # noqa: E402
+from FableReportGen import (         # noqa: E402  # pending
     load_combined_tables,
     compute_stats,
     build_briefing,
     _chart_01, _chart_02, _chart_03, _chart_04, _chart_05,
     _chart_06, _chart_07, _chart_08, _chart_09, _chart_10,
 )
-from FableVisualizerV4_Comparison import (                         # noqa: E402
+from comparison import (             # noqa: E402
     choose_baseline_pathway,
     detect_pathway_col,
 )
