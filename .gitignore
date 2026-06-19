@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 *.pyo
 .ipynb_checkpoints/
+*.egg-info/
 
 # Virtual environments
 .venv/
@@ -10,17 +11,18 @@ venv/
 env/
 
 # FABLE run outputs (large, generated)
-all_pathways_run_*/
 exports/
+all_pathways_run_*/
 plotly_batch/
 plotly_curated/
 plotly_dashboard/
 plotly_deviation/
 scenario_deviation_analysis/
+scenario_deviation_summary.csv
 
-# Temp / build artifacts
-FableVisualizerV4_AllPathwaysRunner.zip
-*.log
+# Workbooks — place your .xlsx/.xlsm file in workbooks/ but do not commit it
+workbooks/*.xlsx
+workbooks/*.xlsm
 
 # Excel temp files
 ~$*.xlsx
@@ -34,9 +36,3 @@ Thumbs.db
 # Secrets / env
 .env
 *.env
-fable_pakistan.egg-info/dependency_links.txt
-fable_pakistan.egg-info/PKG-INFO
-fable_pakistan.egg-info/requires.txt
-fable_pakistan.egg-info/SOURCES.txt
-fable_pakistan.egg-info/top_level.txt
-*.xlsx

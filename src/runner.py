@@ -312,7 +312,10 @@ def _workbook_from_config() -> str:
         for line in config.read_text().splitlines():
             m = re.match(r"^\s*workbook\s*:\s*(.+)", line)
             if m:
-                return m.group(1).strip()
+                wb = Path(m.group(1).strip())
+                if not wb.is_absolute():
+                    wb = config.parent / wb
+                return str(wb)
     raise SystemExit("No --workbook given and config.yaml has no workbook entry.")
 
 

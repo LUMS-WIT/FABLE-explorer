@@ -1296,6 +1296,7 @@ def combined_tables_tab(run_dir: Path) -> None:
                 "Baseline pathway",
                 unique_paths,
                 index=unique_paths.index(default_base),
+                key="combined_tables_baseline",
             )
             mode = st.radio("View", ["Absolute", "Delta", "% Delta"], horizontal=True)
             if mode != "Absolute":
@@ -1378,6 +1379,7 @@ def deviation_analysis_tab(run_dir: Path) -> None:
                 if available_pathways and default_baseline in available_pathways
                 else 0
             ),
+            key="deviation_baseline",
         )
     with col4:
         regenerate = st.button("Generate / refresh summary", key="deviation_generate")
@@ -1484,6 +1486,167 @@ def deviation_analysis_tab(run_dir: Path) -> None:
         st.success(f"Saved: {out_path}")
 
 
+def pathway_comparison_tab(run_dir: Path) -> None:
+    st.subheader("Pathway Comparison")
+    st.caption("Select a table and metrics to compare pathways side by side.")
+
+    combined_dir = run_dir / "combined_tables"
+    if not combined_dir.exists():
+        st.error(f"combined_tables not found in: {run_dir}")
+        return
+
+    table_paths = sorted(combined_dir.glob("*.csv"))
+    if not table_paths:
+        st.warning("No combined tables found.")
+        return
+
+    table_map = {p.stem.replace("__all_pathways", ""): p for p in table_paths}
+    table_name = st.selectbox("Table", sorted(table_map.keys()), key="comp_table")
+    df = load_csv(table_map[table_name])
+
+    pathway_col = detect_pathway_col(df.columns.tolist())
+    year_col = detect_year_col(df.columns.tolist())
+
+    if pathway_col is None:
+        st.warning("No pathway column found in this table.")
+        return
+
+    all_pathways = sorted(df[pathway_col].dropna().unique().tolist())
+    selected_pathways = st.multiselect(
+        "Pathways to compare",
+        all_pathways,
+        default=all_pathways,
+        key="comp_pathways",
+    )
+    if not selected_pathways:
+        st.info("Select at least one pathway.")
+        return
+
+    cat_cols = [
+        c for c in df.columns
+        if c not in {pathway_col, year_col} and df[c].dtype == object
+    ]
+    numeric_cols = [
+        c for c in df.columns
+        if c not in {pathway_col, year_col}
+        and pd.to_numeric(df[c], errors="coerce").notna().any()
+    ]
+
+    col1, col2 = st.columns(2)
+    with col1:
+        selected_metrics = st.multiselect(
+            "Metrics to plot",
+            numeric_cols,
+            default=numeric_cols[:min(4, len(numeric_cols))],
+            key="comp_metrics",
+        )
+    with col2:
+        category_col = st.selectbox(
+            "Group by (optional)",
+            ["(none)"] + cat_cols,
+            key="comp_category",
+        )
+
+    if not selected_metrics:
+        st.info("Select at least one metric.")
+        return
+
+    category_col = None if category_col == "(none)" else category_col
+    category_values = None
+    if category_col:
+        vals = sorted(df[category_col].dropna().unique().tolist())
+        category_values = st.multiselect(
+            "Category values",
+            vals,
+            default=vals[:min(4, len(vals))],
+            key="comp_cat_values",
+        )
+
+    plot_df = df[df[pathway_col].isin(selected_pathways)].copy()
+    if category_col and category_values:
+        plot_df = plot_df[plot_df[category_col].isin(category_values)]
+    for col in selected_metrics:
+        plot_df[col] = pd.to_numeric(plot_df[col], errors="coerce")
+    plot_df = plot_df.dropna(subset=selected_metrics, how="all")
+
+    if plot_df.empty:
+        st.warning("No data after filtering.")
+        return
+
+    n = len(selected_metrics)
+    cols_per_row = st.radio(
+        "Panels per row", [1, 2], index=1, horizontal=True, key="comp_cols"
+    )
+    rows_needed = -(-n // cols_per_row)
+
+    fig = make_subplots(
+        rows=rows_needed,
+        cols=cols_per_row,
+        subplot_titles=selected_metrics,
+        shared_xaxes=False,
+    )
+
+    colors = px.colors.qualitative.Plotly
+    pathway_color = {p: colors[i % len(colors)] for i, p in enumerate(selected_pathways)}
+
+    for idx, metric in enumerate(selected_metrics):
+        row = idx // cols_per_row + 1
+        col = idx % cols_per_row + 1
+
+        group_cols = [pathway_col]
+        if year_col:
+            group_cols.append(year_col)
+        if category_col:
+            group_cols.append(category_col)
+
+        agg = plot_df.groupby(group_cols, as_index=False)[metric].sum()
+
+        for pathway in selected_pathways:
+            sub = agg[agg[pathway_col] == pathway]
+            if sub.empty:
+                continue
+            if category_col:
+                for cat_val, grp in sub.groupby(category_col):
+                    x_vals = grp[year_col].tolist() if year_col else [str(cat_val)]
+                    y_vals = grp[metric].tolist()
+                    fig.add_scatter(
+                        row=row, col=col,
+                        x=x_vals, y=y_vals,
+                        mode="lines+markers",
+                        name=f"{pathway} – {cat_val}",
+                        legendgroup=f"{pathway}_{cat_val}",
+                        showlegend=(idx == 0),
+                        line={"color": pathway_color[pathway]},
+                    )
+            else:
+                x_vals = sub[year_col].tolist() if year_col else [pathway]
+                y_vals = sub[metric].tolist()
+                fig.add_scatter(
+                    row=row, col=col,
+                    x=x_vals, y=y_vals,
+                    mode="lines+markers",
+                    name=pathway,
+                    legendgroup=pathway,
+                    showlegend=(idx == 0),
+                    line={"color": pathway_color[pathway]},
+                )
+
+    fig.update_layout(
+        height=max(350 * rows_needed, 400),
+        title_text=f"{table_name} — pathway comparison",
+        legend={"tracegroupgap": 4},
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    if st.button("Export comparison chart as HTML", key="comp_export"):
+        out_dir = run_dir / "plotly_comparison"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        metrics_slug = "_".join(safe_name(m) for m in selected_metrics[:3])
+        out_path = out_dir / f"{safe_name(table_name)}__{metrics_slug}.html"
+        fig.write_html(out_path)
+        st.success(f"Saved: {out_path}")
+
+
 def chart_series_tab(run_dir: Path) -> None:
     st.subheader("Chart Series (from Excel charts)")
     meta = build_chart_index(run_dir)
@@ -1566,8 +1729,8 @@ def chart_series_tab(run_dir: Path) -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="FABLE Pakistan All-Pathways Dashboard", layout="wide")
-    st.title("FABLE Pakistan All-Pathways Dashboard")
+    st.set_page_config(page_title="FABLE All-Pathways Dashboard", layout="wide")
+    st.title("FABLE All-Pathways Dashboard")
     st.caption("Explore combined tables, deviations, and chart-series outputs with Plotly.")
 
     run_dir = sidebar_run_selector()
@@ -1577,16 +1740,18 @@ def main() -> None:
 
     st.write(f"Using run folder: `{run_dir}`")
 
-    tab1, tab2, tab3, tab4 = st.tabs(
-        ["Curated Charts", "Combined Tables", "Deviation Analysis", "Chart Series"]
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        ["Curated Charts", "Combined Tables", "Pathway Comparison", "Deviation Analysis", "Chart Series"]
     )
     with tab1:
         curated_charts_tab(run_dir)
     with tab2:
         combined_tables_tab(run_dir)
     with tab3:
-        deviation_analysis_tab(run_dir)
+        pathway_comparison_tab(run_dir)
     with tab4:
+        deviation_analysis_tab(run_dir)
+    with tab5:
         chart_series_tab(run_dir)
 
 

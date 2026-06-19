@@ -1,1 +1,0 @@
-Table,Metric,Group,BaselinePathway,BaselineValue,MaxPathway,MaxValue,MinPathway,MinValue,SpreadAbs,SpreadPct,MaxDiffPathway,MaxAbsDiffVsBaseline,MaxPctDiffVsBaseline,HasUndefinedPctDiff,ExpectedPathwayCount,PresentPathwayCount,IncompleteCoverage,MissingPathways,AbsDeviationThreshold,PctDeviationThreshold,SignificantDeviation

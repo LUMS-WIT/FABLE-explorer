@@ -25,7 +25,7 @@ from runner import run_all_pathways
 class FableLauncher(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("FABLE Pakistan Launcher")
+        self.title("FABLE Launcher")
         self.geometry("640x360")
         self.resizable(False, False)
 

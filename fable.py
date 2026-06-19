@@ -23,12 +23,14 @@ Commands:
   run         Run all pathways in the FABLE workbook and export CSVs
               (requires Excel to be installed)
   dashboard   Launch the interactive Streamlit dashboard
+  launcher    Launch the Tkinter GUI launcher
 
 Examples:
   python fable.py run
   python fable.py run --max-pathways 2   # quick test with first 2 pathways
   python fable.py run --excel-visible    # show Excel window while running
   python fable.py dashboard
+  python fable.py launcher
 """
 
 
@@ -47,6 +49,11 @@ def main() -> None:
     elif cmd == "dashboard":
         subprocess.run(
             ["streamlit", "run", str(_SRC / "dashboard.py")] + rest,
+            check=True,
+        )
+    elif cmd == "launcher":
+        subprocess.run(
+            [sys.executable, str(_SRC / "launcher.py")] + rest,
             check=True,
         )
     else:

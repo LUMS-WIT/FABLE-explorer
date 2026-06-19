@@ -1,6 +1,6 @@
-# FABLE Pakistan — Post-processing & Visualization
+# FABLE All-Pathways Runner & Dashboard
 
-Post-processing and visualization tools for FABLE Pakistan pathway outputs. This repository takes the raw Excel-based FABLE Pakistan workbook, runs all scenario pathways through Excel to extract outputs, and provides an interactive dashboard to explore and compare results across pathways.
+Post-processing and visualization tools for FABLE country workbooks. This repository takes any Excel-based FABLE workbook, runs all scenario pathways through Excel to extract outputs, and provides an interactive Streamlit dashboard to explore and compare results.
 
 FABLE (Food, Agriculture, Biodiversity, Land, and Energy) is a global modelling framework for analyzing food and land-use systems. See [docs/overview.md](docs/overview.md) for project background.
 
@@ -8,11 +8,21 @@ FABLE (Food, Agriculture, Biodiversity, Land, and Energy) is a global modelling 
 
 ## What This Repository Does
 
-1. **Runs all pathways** — iterates every named scenario in the FABLE Pakistan workbook, triggers Excel recalculation, and exports all output tables as CSVs.
+1. **Runs all pathways** — iterates every named scenario in the FABLE workbook, triggers Excel recalculation, and exports all output tables as CSVs.
 2. **Compares pathways** — computes deviation of each scenario from a chosen baseline (`CurrentTrends` by default) across all output domains.
-3. **Visualizes results** — interactive Streamlit dashboard with curated charts, combined table explorer, and deviation analysis.
+3. **Visualizes results** — interactive Streamlit dashboard with curated charts, a combined table explorer, pathway comparison plots, and deviation analysis.
 
 Output domains: GHG, PRODUCTION, TRADE, JOBS, FOOD, LAND, WATER, N and P, BIODIVERSITY.
+
+---
+
+## Adapting for Your Country
+
+This repository was developed for FABLE Pakistan and can be adapted for any FABLE country workbook:
+
+1. Place your country's `.xlsx` workbook in `workbooks/` and update `config.yaml`.
+2. The runner discovers pathways and output tables automatically — no code changes needed.
+3. The **Curated Charts** tab contains charts tailored for the Pakistan workbook column names. For other countries, use the **Combined Tables**, **Pathway Comparison**, and **Deviation Analysis** tabs, which work generically with any FABLE output structure.
 
 ---
 
@@ -20,13 +30,14 @@ Output domains: GHG, PRODUCTION, TRADE, JOBS, FOOD, LAND, WATER, N and P, BIODIV
 
 ```
 FABLE_Pakistan/
-├── fable.py              # Unified entry point — run pathways or launch dashboard
-├── config.yaml           # Workbook filename config (edit here, not in code)
+├── fable.py              # Unified entry point — run pathways, dashboard, or launcher
+├── config.yaml           # Workbook path (edit this, not the code)
+├── workbooks/            # Place your .xlsx workbook here (not committed to git)
 ├── src/
-│   ├── runner.py         # Phase 1: run all pathways through Excel, export CSVs
+│   ├── runner.py         # Phase 1: iterate all pathways through Excel, export CSVs
 │   ├── dashboard.py      # Phase 2: Streamlit dashboard for exploring outputs
 │   ├── comparison.py     # Shared helpers: deviation analysis, baseline comparison
-│   └── launcher.py       # GUI launcher (Tkinter)
+│   └── launcher.py       # Optional Tkinter GUI launcher
 ├── notebooks/
 │   └── runner.ipynb      # Jupyter version of the runner
 ├── docs/                 # Documentation
@@ -39,22 +50,6 @@ FABLE_Pakistan/
 ## Installation
 
 Requires **Microsoft Excel** (Windows or Mac) for Phase 1 (running pathways). Phase 2 (dashboard) works on any machine.
-
-```bash
-pip install -e .
-```
-
-Or without installing as a package:
-
-```bash
-pip install -r requirements.txt
-```
-
-For Jupyter notebook support:
-
-```bash
-pip install -e ".[notebook]"
-```
 
 ### Recommended: virtual environment
 
@@ -70,12 +65,24 @@ source .venv/bin/activate
 pip install -e .
 ```
 
+Or without installing as a package:
+
+```bash
+pip install -r requirements.txt
+```
+
+For Jupyter notebook support:
+
+```bash
+pip install -e ".[notebook]"
+```
+
 ---
 
 ## Workflow
 
 ```
-1. Edit config.yaml with your workbook filename
+1. Place workbook in workbooks/ and edit config.yaml
          ↓
 2. Run pathways  →  python fable.py run          (needs Excel installed)
          ↓
@@ -86,13 +93,11 @@ pip install -e .
 
 ## Quick Start
 
-**Step 1** — set your workbook name in `config.yaml`:
+**Step 1** — place your workbook in `workbooks/` and set its name in `config.yaml`:
 
 ```yaml
-workbook: FABLEPAKUP50.xlsx
+workbook: workbooks/FABLEPAKUP50.xlsx
 ```
-
-Place the workbook file in the repo root.
 
 **Step 2** — run all pathways (opens Excel, iterates each scenario, exports CSVs):
 
@@ -115,13 +120,15 @@ python fable.py dashboard
 python fable.py run
 
 # Run with options
-python fable.py run --max-pathways 2        # quick test: first 2 pathways only
-python fable.py run --excel-visible         # show Excel window while running
-python fable.py run --charts                # also extract raw chart data (slower)
+python fable.py run --max-pathways 2          # quick test: first 2 pathways only
+python fable.py run --excel-visible           # show Excel window while running
 python fable.py run --workbook path/to/file.xlsx   # override config.yaml
 
 # Launch dashboard
 python fable.py dashboard
+
+# Launch Tkinter GUI (alternative to CLI)
+python fable.py launcher
 ```
 
 Pass `--help` to see all options:
@@ -141,13 +148,23 @@ exports/
 └── all_pathways_run_<timestamp>/
     ├── run_manifest.csv                  ← status per pathway (ok / failed)
     ├── scenario_deviation_summary.csv    ← deviation vs baseline across all metrics
-    ├── combined_tables/                  ← one CSV per output sheet, all pathways merged
-    ├── tables_per_pathway/               ← per-pathway table CSVs
-    ├── charts_per_pathway/               ← per-pathway chart series CSVs (if --charts)
-    └── workbooks/                        ← recalculated Excel copy per pathway
+    ├── combined_tables/                  ← one CSV per output table, all pathways merged
+    └── tables_per_pathway/               ← per-pathway table CSVs
 ```
 
 All combined CSVs include a `RunPathway` column to identify the scenario.
+
+---
+
+## Dashboard Tabs
+
+| Tab | Description |
+|-----|-------------|
+| **Curated Charts** | Pre-built charts for the Pakistan workbook (production, trade, jobs, food, land, GHG, biodiversity) |
+| **Combined Tables** | Interactive explorer for any output table with filtering, aggregation, and baseline comparison |
+| **Pathway Comparison** | Side-by-side multi-metric comparison across selected pathways |
+| **Deviation Analysis** | Highlights which metrics deviate most from the baseline pathway |
+| **Chart Series** | Plots chart series extracted directly from Excel (if available) |
 
 ---
 
