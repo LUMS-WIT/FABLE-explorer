@@ -1,14 +1,14 @@
-# Overview — FABLE Pakistan
+# Overview — FABLE Country Explorer
 
-## About FABLE Pakistan
+## About FABLE
 
-FABLE Pakistan is part of the global Food, Agriculture, Biodiversity, Land-Use, and Energy (FABLE) Consortium — a collaborative network of research teams across more than 20 countries working to design sustainable pathways for food and land systems. The initiative is coordinated by the Food and Land Use Coalition (FOLU) and the International Institute for Applied Systems Analysis (IIASA). More information at [fableconsortium.org](https://fableconsortium.org).
+The Food, Agriculture, Biodiversity, Land-Use, and Energy (FABLE) Consortium is a collaborative network of research teams across more than 20 countries working to design sustainable pathways for food and land systems. The initiative is coordinated by the Food and Land Use Coalition (FOLU) and the International Institute for Applied Systems Analysis (IIASA). More information at [fableconsortium.org](https://fableconsortium.org).
 
-The Pakistan team is led by the Water, Informatics and Technology (WIT) program at the Lahore University of Management Sciences (LUMS), in collaboration with the FABLE Secretariat at IIASA.
+Each country team develops a national FABLE workbook — an Excel-based model calibrated to local data and policy contexts — and uses it to explore how food, agriculture, land, and energy systems evolve under different scenarios.
 
 ## What the FABLE Model Does
 
-The FABLE model is an open-source accounting and scenario analysis tool built in Excel and Python. It quantifies how Pakistan's food, agriculture, land, and energy systems evolve under different policy and climate futures by tracking:
+The FABLE model is an open-source accounting and scenario analysis tool built in Excel. It quantifies how a country's food, agriculture, land, and energy systems evolve under different policy and climate futures by tracking:
 
 - Food production and demand
 - Crop and livestock yields
@@ -22,7 +22,7 @@ The model helps balance priorities such as food security, biodiversity protectio
 
 ## Output Domains
 
-Pakistan's FABLE model exports outputs across nine domains:
+The FABLE workbook exports outputs across nine domains:
 
 | Domain | What it tracks |
 |---|---|
@@ -36,23 +36,25 @@ Pakistan's FABLE model exports outputs across nine domains:
 | N and P | Nitrogen and phosphorus flows |
 | BIODIVERSITY | Habitat pressure and biodiversity indicators |
 
-## Current Status
-
-The team is localizing the FABLE Calculator for Pakistan by integrating national data from the Pakistan Bureau of Statistics, the Ministry of National Food Security and Research, SUPARCO, and other key institutions. Datasets are aligned with global standards including FAO and World Bank indicators.
-
-Scenarios are being developed consistent with Pakistan's NDCs, National Adaptation Plan, and Agriculture Policy Framework — spanning reference, sustainable, and high-ambition futures.
-
-The first open-access release of FABLE Pakistan is planned for **March 2026**, including a national report, database, and interactive online dashboard.
-
 ## What This Repository Does
 
-This repository is the post-processing and visualization layer for the FABLE Pakistan workbook. It automates the workbook-based workflow:
+This repository is the post-processing and visualization layer for any FABLE country workbook. It automates the workbook-based workflow:
 
-1. **Run all pathways** — iterates every named scenario, triggers Excel recalculation, and exports all output tables and chart series as CSVs.
-2. **Compare pathways** — computes deviation of each scenario from a chosen baseline (`CurrentTrends`) across all output domains and years.
-3. **Visualize results** — interactive Streamlit dashboard with curated charts, combined table explorer, and deviation analysis.
+1. **Run all pathways** — iterates every named scenario in your workbook, triggers Excel recalculation, and exports all output tables and chart series as CSVs.
+2. **Compare pathways** — computes deviation of each scenario from a chosen baseline (e.g. `CurrentTrends`) across all output domains and years.
+3. **Visualize results** — interactive Streamlit dashboard with curated charts, combined table explorer, pathway comparison plots, and deviation analysis.
 4. **GUI launcher** — Tkinter desktop application for non-technical users.
 
 ## Pathways
 
-Each pathway represents a distinct scenario for Pakistan's food and land systems — for example, `CurrentTrends` (baseline), `HealthyDiet`, or `AgroEcology`. The model is fully recalculated in Excel for each pathway before export, ensuring consistent outputs.
+Each pathway represents a distinct scenario for a country's food and land systems — for example, `CurrentTrends` (baseline), `HealthyDiet`, or `AgroEcology`. The model is fully recalculated in Excel for each pathway before export, ensuring consistent outputs across all scenarios.
+
+The runner discovers pathway names automatically from your workbook — no hardcoding required.
+
+## Adapting for Your Country
+
+The tool is designed to work with any FABLE country workbook:
+
+1. Place your country's `.xlsx` workbook in `workbooks/` and update `config.yaml` with the path.
+2. The runner discovers pathways and output tables automatically — no code changes needed for the runner, comparison, or dashboard tabs (Combined Tables, Pathway Comparison, Deviation Analysis).
+3. The **Curated Charts** tab contains charts with column names specific to the workbook it was built with. For other countries, use the generic dashboard tabs, which work with any FABLE output structure.

@@ -4,7 +4,7 @@
 
 - **Windows** with Microsoft Excel installed (required for workbook recalculation via COM automation)
 - Python 3.9 or later
-- The FABLE Pakistan workbook (`.xlsx` or `.xlsm`)
+- Your country's FABLE workbook (`.xlsx` or `.xlsm`)
 
 ### Install dependencies
 
@@ -19,6 +19,18 @@ python -m venv .venv
 .venv\Scripts\activate
 pip install pywin32 openpyxl pandas streamlit plotly
 ```
+
+---
+
+## Configuration
+
+Before running, update `config.yaml` with the path to your workbook:
+
+```yaml
+workbook_path: workbooks/your_country.xlsx
+```
+
+All other settings (output directory, baseline pathway name) can also be set here. The runner will discover pathway names and output tables automatically from your workbook.
 
 ---
 
@@ -52,7 +64,7 @@ streamlit run src/dashboard.py
 Run all pathways from a terminal:
 
 ```bash
-python src/runner.py --workbook "path/to/Pakistan.xlsx"
+python src/runner.py --workbook "path/to/your_country.xlsx"
 ```
 
 Key flags:
@@ -88,3 +100,19 @@ exports/
 ```
 
 All combined CSVs include a `RunPathway` column identifying the scenario.
+
+---
+
+## Dashboard Tabs
+
+| Tab | Works with any FABLE workbook? | Notes |
+|---|---|---|
+| **Curated Charts** | No — column-name specific | Built for the workbook it was originally developed with. Other teams should customize this tab for their own column names. |
+| **Combined Tables** | Yes | Generic explorer for any output table |
+| **Pathway Comparison** | Yes | Line/bar plots across all pathways for any metric |
+| **Deviation Analysis** | Yes | Highlights metrics deviating most from the baseline |
+| **Chart Series** | Yes | Plots chart series extracted directly from Excel |
+
+## Contributing
+
+Contributions are welcome — see the repository README for details. If you adapt the tool for your country workbook, consider contributing your curated charts tab back so other teams can benefit.

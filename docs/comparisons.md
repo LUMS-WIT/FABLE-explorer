@@ -2,10 +2,10 @@
 
 ## Policy Questions This Addresses
 
-FABLE Pakistan pathway comparisons are designed to answer questions like:
+FABLE pathway comparisons are designed to answer questions like:
 
-- How can Pakistan increase food production to meet population growth while keeping emissions within sustainable limits?
-- What mix of agricultural and climate policies could help achieve Pakistan's NDC and adaptation targets?
+- How can a country increase food production to meet population growth while keeping emissions within sustainable limits?
+- What mix of agricultural and climate policies could help achieve national NDC and adaptation targets?
 - How can land-use planning balance crop expansion, forest protection, and biodiversity conservation?
 - What are the potential benefits of improving irrigation efficiency and adopting climate-smart farming practices?
 - How will changes in diet, population, and income affect food demand, trade, and nutrition outcomes?
@@ -16,7 +16,7 @@ FABLE Pakistan pathway comparisons are designed to answer questions like:
 
 ## Concept
 
-A FABLE Pakistan run produces outputs for multiple pathways (scenarios). Comparison analysis measures how each pathway diverges from a chosen **baseline**, typically `CurrentTrends`.
+A FABLE Explorer run produces outputs for multiple pathways (scenarios). Comparison analysis measures how each pathway diverges from a chosen **baseline**, typically `CurrentTrends`.
 
 This allows quantifying:
 - GHG emissions change under `HealthyDiet` vs. `CurrentTrends`
@@ -61,7 +61,7 @@ Key columns in the deviation summary:
 
 `src/dashboard.py` surfaces comparisons interactively across four tabs:
 
-- **Curated Charts** — pre-built charts per output domain for a selected pathway
+- **Curated Charts** — pre-built charts per output domain for a selected pathway (column names are workbook-specific; adapt for your country)
 - **Combined Tables** — explore any output table with pathway overlay, baseline delta, and % delta modes
 - **Deviation Analysis** — ranked list of metrics with strongest pathway divergence; drill into charts for top deviations
 - **Chart Series** — raw chart series data extracted from Excel, with pathway overlay and baseline comparison
