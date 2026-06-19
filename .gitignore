@@ -34,3 +34,9 @@ Thumbs.db
 # Secrets / env
 .env
 *.env
+fable_pakistan.egg-info/dependency_links.txt
+fable_pakistan.egg-info/PKG-INFO
+fable_pakistan.egg-info/requires.txt
+fable_pakistan.egg-info/SOURCES.txt
+fable_pakistan.egg-info/top_level.txt
+*.xlsx

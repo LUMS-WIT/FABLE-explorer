@@ -30,6 +30,8 @@ FABLE_Pakistan/
 ├── docs/                 # Documentation
 ├── Launch_Dashboard.bat  # Windows: launch Streamlit dashboard
 ├── Launch_Launcher.bat   # Windows: launch GUI launcher
+├── launch_dashboard.sh   # Mac/Linux: launch Streamlit dashboard
+├── launch_launcher.sh    # Mac/Linux: launch GUI launcher (run step Windows-only)
 ├── pyproject.toml        # Project metadata and dependencies
 ├── requirements.txt      # Pinned dependencies for quick install
 └── run_fable_analysis.py # Planned end-to-end pipeline (WIP)
@@ -81,11 +83,20 @@ pip install pywin32>=306
 
 ---
 
-## Quick Start (Windows)
+## Quick Start
+
+**Windows** (full workflow — run pathways + visualize):
 
 1. Place your FABLE Pakistan workbook (`.xlsx` or `.xlsm`) in this folder.
 2. Double-click `Launch_Launcher.bat` to open the GUI.
 3. Select the workbook, choose an output folder, and click **Run Dashboard**.
+
+**Mac / Linux** (visualize existing run outputs only — pathway runner requires Windows + Excel):
+
+```bash
+chmod +x launch_dashboard.sh
+./launch_dashboard.sh
+```
 
 ---
 
