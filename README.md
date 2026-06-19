@@ -8,7 +8,7 @@ FABLE (Food, Agriculture, Biodiversity, Land, and Energy) is a global modelling 
 
 ## What This Repository Does
 
-1. **Runs all pathways** — iterates every named scenario in the FABLE Pakistan workbook, triggers Excel recalculation, and exports all output tables and chart series as CSVs.
+1. **Runs all pathways** — iterates every named scenario in the FABLE Pakistan workbook, triggers Excel recalculation, and exports all output tables as CSVs.
 2. **Compares pathways** — computes deviation of each scenario from a chosen baseline (`CurrentTrends` by default) across all output domains.
 3. **Visualizes results** — interactive Streamlit dashboard with curated charts, combined table explorer, and deviation analysis.
 
@@ -20,38 +20,34 @@ Output domains: GHG, PRODUCTION, TRADE, JOBS, FOOD, LAND, WATER, N and P, BIODIV
 
 ```
 FABLE_Pakistan/
+├── fable.py              # Unified entry point — run pathways or launch dashboard
+├── config.yaml           # Workbook filename config (edit here, not in code)
 ├── src/
+│   ├── runner.py         # Phase 1: run all pathways through Excel, export CSVs
+│   ├── dashboard.py      # Phase 2: Streamlit dashboard for exploring outputs
 │   ├── comparison.py     # Shared helpers: deviation analysis, baseline comparison
-│   ├── runner.py         # Step 1: run all pathways through Excel, export CSVs
-│   ├── dashboard.py      # Step 2: Streamlit dashboard for exploring outputs
-│   └── launcher.py       # Windows GUI launcher (Tkinter)
+│   └── launcher.py       # GUI launcher (Tkinter)
 ├── notebooks/
 │   └── runner.ipynb      # Jupyter version of the runner
 ├── docs/                 # Documentation
-├── Launch_Dashboard.bat  # Windows: launch Streamlit dashboard
-├── Launch_Launcher.bat   # Windows: launch GUI launcher
-├── launch_dashboard.sh   # Mac/Linux: launch Streamlit dashboard
-├── launch_launcher.sh    # Mac/Linux: launch GUI launcher (run step Windows-only)
 ├── pyproject.toml        # Project metadata and dependencies
-├── requirements.txt      # Pinned dependencies for quick install
-└── run_fable_analysis.py # Planned end-to-end pipeline (WIP)
+└── requirements.txt      # Dependencies for direct install
 ```
 
 ---
 
 ## Installation
 
-**Requires Windows with Microsoft Excel** — the runner uses Excel COM automation to recalculate the workbook for each pathway.
+Requires **Microsoft Excel** (Windows or Mac) for Phase 1 (running pathways). Phase 2 (dashboard) works on any machine.
 
 ```bash
-# Option 1: install as a project (recommended)
 pip install -e .
+```
 
-# Option 2: install dependencies directly
+Or without installing as a package:
+
+```bash
 pip install -r requirements.txt
-
-# Then install pywin32 separately (Windows only)
-pip install pywin32>=306
 ```
 
 For Jupyter notebook support:
@@ -60,13 +56,18 @@ For Jupyter notebook support:
 pip install -e ".[notebook]"
 ```
 
-### Virtual environment (recommended)
+### Recommended: virtual environment
 
 ```bash
 python -m venv .venv
+
+# Mac / Linux
+source .venv/bin/activate
+
+# Windows
 .venv\Scripts\activate
-pip install -e ".[notebook]"
-pip install pywin32>=306
+
+pip install -e .
 ```
 
 ---
@@ -74,61 +75,76 @@ pip install pywin32>=306
 ## Workflow
 
 ```
-1. Place FABLE Pakistan workbook (.xlsx / .xlsm) in this folder
-        ↓
-2. Run pathways  →  Launch_Launcher.bat  or  python src/runner.py --workbook <path>
-        ↓
-3. Explore results  →  Launch_Dashboard.bat  or  streamlit run src/dashboard.py
+1. Edit config.yaml with your workbook filename
+         ↓
+2. Run pathways  →  python fable.py run          (needs Excel installed)
+         ↓
+3. View results  →  python fable.py dashboard    (browser, no Excel needed)
 ```
 
 ---
 
 ## Quick Start
 
-**Windows** (full workflow — run pathways + visualize):
+**Step 1** — set your workbook name in `config.yaml`:
 
-1. Place your FABLE Pakistan workbook (`.xlsx` or `.xlsm`) in this folder.
-2. Double-click `Launch_Launcher.bat` to open the GUI.
-3. Select the workbook, choose an output folder, and click **Run Dashboard**.
+```yaml
+workbook: FABLEPAKUP50.xlsx
+```
 
-**Mac / Linux** (visualize existing run outputs only — pathway runner requires Windows + Excel):
+Place the workbook file in the repo root.
+
+**Step 2** — run all pathways (opens Excel, iterates each scenario, exports CSVs):
 
 ```bash
-chmod +x launch_dashboard.sh
-./launch_dashboard.sh
+python fable.py run
+```
+
+**Step 3** — explore results in the browser:
+
+```bash
+python fable.py dashboard
 ```
 
 ---
 
-## CLI Usage
+## CLI Reference
 
 ```bash
-# Run all pathways
-python src/runner.py --workbook "path/to/Pakistan.xlsx"
+# Run all pathways (reads workbook from config.yaml)
+python fable.py run
 
-# Optional flags
-python src/runner.py --workbook "Pakistan.xlsx" --max-pathways 2   # quick test
-python src/runner.py --workbook "Pakistan.xlsx" --excel-visible     # show Excel window
+# Run with options
+python fable.py run --max-pathways 2        # quick test: first 2 pathways only
+python fable.py run --excel-visible         # show Excel window while running
+python fable.py run --charts                # also extract raw chart data (slower)
+python fable.py run --workbook path/to/file.xlsx   # override config.yaml
 
 # Launch dashboard
-streamlit run src/dashboard.py
+python fable.py dashboard
+```
+
+Pass `--help` to see all options:
+
+```bash
+python fable.py run --help
 ```
 
 ---
 
 ## Outputs
 
-Each run produces an `all_pathways_run_<timestamp>/` folder:
+Each run creates a timestamped folder under `exports/`:
 
 ```
 exports/
 └── all_pathways_run_<timestamp>/
-    ├── run_manifest.csv                  ← status per pathway (success / error)
+    ├── run_manifest.csv                  ← status per pathway (ok / failed)
     ├── scenario_deviation_summary.csv    ← deviation vs baseline across all metrics
     ├── combined_tables/                  ← one CSV per output sheet, all pathways merged
     ├── tables_per_pathway/               ← per-pathway table CSVs
-    ├── charts_per_pathway/               ← per-pathway chart series CSVs
-    └── workbooks/                        ← recalculated Excel copies per pathway
+    ├── charts_per_pathway/               ← per-pathway chart series CSVs (if --charts)
+    └── workbooks/                        ← recalculated Excel copy per pathway
 ```
 
 All combined CSVs include a `RunPathway` column to identify the scenario.

@@ -15,8 +15,7 @@ dependencies = [
     "pandas>=2.0",
     "plotly>=5.0",
     "streamlit>=1.30",
-    # Windows only — required for Excel COM automation (runner.py)
-    "pywin32>=306; sys_platform == 'win32'",
+    "xlwings>=0.30",
 ]
 
 [project.optional-dependencies]
