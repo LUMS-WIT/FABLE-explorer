@@ -189,4 +189,4 @@ This project is licensed under the [Creative Commons Attribution 4.0 Internation
 
 You are free to share and adapt this work for any purpose, including commercially, as long as you give appropriate credit to the authors. When using or building on this tool, please cite:
 
-> Muhammad Awais, Syeda Baseerat Fatima, Ahmad Saeed. *FABLE All-Pathways Runner & Dashboard*. 2026. https://github.com/awais307/FABLE_Pakistan
+> Syeda Baseerat Fatima, Ahmad Saeed, Muhammad Awais. *FABLE All-Pathways Runner & Dashboard*. 2026. https://github.com/LUMS-WIT/FABLE-explorer
