@@ -158,13 +158,12 @@ All combined CSVs include a `RunPathway` column to identify the scenario.
 
 ## Dashboard Tabs
 
-| Tab | Description |
-|-----|-------------|
-| **Curated Charts** | Pre-built charts for the Pakistan workbook (production, trade, jobs, food, land, GHG, biodiversity) |
-| **Combined Tables** | Interactive explorer for any output table with filtering, aggregation, and baseline comparison |
-| **Pathway Comparison** | Side-by-side multi-metric comparison across selected pathways |
-| **Deviation Analysis** | Highlights which metrics deviate most from the baseline pathway |
-| **Chart Series** | Plots chart series extracted directly from Excel (if available) |
+| Tab                          | Description                                                                                                                                                                                                             |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Curated Charts**     | Pre-built charts for the Pakistan workbook (production, trade, jobs, food, land, GHG, biodiversity)                                                                                                                     |
+| **Combined Tables**    | Interactive explorer for any output table. Toggle between**Single metric** (line/bar + optional baseline comparison) and **Multi-metric comparison** (subplot grid of all selected metrics across pathways) |
+| **Deviation Analysis** | Highlights which metrics deviate most from the baseline pathway                                                                                                                                                         |
+| **Chart Series**       | Plots chart series extracted directly from Excel (if available)                                                                                                                                                         |
 
 ---
 
@@ -178,6 +177,16 @@ All combined CSVs include a `RunPathway` column to identify the scenario.
 
 ## Contributors
 
+- [Muhammad Awais](https://github.com/awais307)
 - [Syeda Baseerat Fatima](https://github.com/syeda-baseerat)
 - [Ahmad Saeed](https://github.com/Ahmed-Saeed20)
-- [Muhammad Awais](https://github.com/awais307)
+
+---
+
+## License
+
+This project is licensed under the [Creative Commons Attribution 4.0 International (CC BY 4.0)](LICENSE) license.
+
+You are free to share and adapt this work for any purpose, including commercially, as long as you give appropriate credit to the authors. When using or building on this tool, please cite:
+
+> Muhammad Awais, Syeda Baseerat Fatima, Ahmad Saeed. *FABLE All-Pathways Runner & Dashboard*. 2026. https://github.com/awais307/FABLE_Pakistan
