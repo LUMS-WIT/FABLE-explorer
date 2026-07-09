@@ -13,11 +13,24 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import io
+import tempfile
+
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
+
+# PDF export dependencies (installed via: pip install kaleido reportlab)
+try:
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.platypus import SimpleDocTemplate, Image as RLImage, Paragraph, Spacer, PageBreak
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib.units import cm
+    PDF_EXPORT_AVAILABLE = True
+except ImportError:
+    PDF_EXPORT_AVAILABLE = False
 
 from comparison import (
     DEFAULT_BASELINE_PATHWAY,
@@ -1200,6 +1213,9 @@ def curated_charts_tab(run_dir: Path) -> None:
     for _, fig in fig_list:
         st.plotly_chart(fig, use_container_width=True)
 
+    # ── PDF download ──────────────────────────────────────────────────────────
+    pdf_export_section(fig_list, f"Curated Charts — {pathway}")
+
     if export_clicked:
         out_root = run_dir / "plotly_curated"
         out_root.mkdir(parents=True, exist_ok=True)
@@ -1334,6 +1350,9 @@ def combined_tables_tab(run_dir: Path) -> None:
             fig.write_html(out_path)
             st.success(f"Saved: {out_path}")
 
+        # PDF download for this single chart
+        pdf_export_section([(metric, fig)], f"{table_name} — {metric}")
+
     else:
         # Multi-metric comparison: subplot grid, one panel per metric
         if pathway_col is None:
@@ -1455,6 +1474,9 @@ def combined_tables_tab(run_dir: Path) -> None:
             out_path = out_dir / f"{safe_name(table_name)}__{metrics_slug}.html"
             fig.write_html(out_path)
             st.success(f"Saved: {out_path}")
+
+        # PDF download for the comparison subplot
+        pdf_export_section([(table_name, fig)], f"{table_name} — Comparison")
 
 
 def deviation_analysis_tab(run_dir: Path) -> None:
@@ -1599,6 +1621,8 @@ def deviation_analysis_tab(run_dir: Path) -> None:
         fig.write_html(out_path)
         st.success(f"Saved: {out_path}")
 
+    pdf_export_section([(metric, fig)], f"Deviation — {table_name} {metric}")
+
 
 def chart_series_tab(run_dir: Path) -> None:
     st.subheader("Chart Series (from Excel charts)")
@@ -1679,6 +1703,181 @@ def chart_series_tab(run_dir: Path) -> None:
         out_path = out_dir / f"{safe_name(sheet)}__{safe_name(chart_title)}__series_{series_idx}.html"
         fig.write_html(out_path)
         st.success(f"Saved: {out_path}")
+
+    pdf_export_section([(chart_title, fig)], f"{sheet} — {chart_title}")
+
+
+def _fig_to_png(fig: go.Figure, width: int = 1400, height: int = 780) -> bytes:
+    """
+    Render a Plotly figure to a full-colour PNG.
+    Strategy (tried in order):
+      1. playwright  – headless Chromium, perfect colours, no kaleido
+      2. Chrome/Edge headless CLI
+      3. kaleido >= 1.0  (kaleido.write_fig)
+      4. kaleido 0.2.x   (fig.write_image)
+    """
+    import subprocess, shutil, tempfile
+
+    # Force explicit colours so nothing falls back to black
+    fig = go.Figure(fig)
+    fig.update_layout(template="plotly", paper_bgcolor="white", plot_bgcolor="white")
+
+    html_str = fig.to_html(full_html=True, include_plotlyjs="cdn", config={"staticPlot": True})
+
+    # 1. playwright
+    try:
+        from playwright.sync_api import sync_playwright  # type: ignore
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": width, "height": height})
+            page.set_content(html_str)
+            page.wait_for_timeout(1500)
+            png = page.screenshot(full_page=False)
+            browser.close()
+        return png
+    except Exception:
+        pass
+
+    # 2. Chrome / Edge headless CLI
+    with tempfile.TemporaryDirectory() as tmp:
+        html_path = os.path.join(tmp, "fig.html")
+        png_path  = os.path.join(tmp, "fig.png")
+        with open(html_path, "w", encoding="utf-8") as f:
+            f.write(html_str)
+        candidates = [
+            "chrome", "google-chrome", "google-chrome-stable",
+            "msedge", "microsoft-edge",
+            r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        ]
+        for candidate in candidates:
+            if shutil.which(candidate) or os.path.exists(candidate):
+                cmd = [candidate, "--headless=new", "--disable-gpu", "--no-sandbox",
+                       "--disable-dev-shm-usage",
+                       f"--window-size={width},{height}",
+                       f"--screenshot={png_path}",
+                       f"file:///{html_path.replace(os.sep, '/')}"]
+                subprocess.run(cmd, capture_output=True, timeout=60)
+                if os.path.exists(png_path):
+                    with open(png_path, "rb") as fh:
+                        return fh.read()
+
+    # 3. kaleido >= 1.0 new API
+    try:
+        import kaleido  # type: ignore
+        if hasattr(kaleido, "write_fig"):
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                tmp_path = tmp.name
+            kaleido.write_fig(fig, tmp_path, width=width, height=height, scale=2)
+            with open(tmp_path, "rb") as fh:
+                data = fh.read()
+            os.unlink(tmp_path)
+            return data
+    except Exception:
+        pass
+
+    # 4. kaleido 0.2.x
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+            tmp_path = tmp.name
+        fig.write_image(tmp_path, width=width, height=height, scale=2)
+        with open(tmp_path, "rb") as fh:
+            data = fh.read()
+        os.unlink(tmp_path)
+        return data
+    except Exception:
+        pass
+
+    raise RuntimeError(
+        "Could not render chart to PNG.\n"
+        "Run:  pip install playwright  then  playwright install chromium"
+    )
+
+
+# backward-compat aliases
+_fig_to_png_plotly_native = _fig_to_png
+_fig_to_png_via_chrome    = _fig_to_png
+
+
+def export_figures_to_pdf(figures: List[Tuple[str, go.Figure]], title: str = "FABLE Dashboard") -> bytes:
+    """Convert a list of Plotly figures into a single full-color PDF (in-memory)."""
+    if not PDF_EXPORT_AVAILABLE:
+        raise RuntimeError("reportlab is not installed. Run: pip install reportlab")
+
+    buf = io.BytesIO()
+    page_size = landscape(A4)
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=page_size,
+        leftMargin=1 * cm,
+        rightMargin=1 * cm,
+        topMargin=1.5 * cm,
+        bottomMargin=1.5 * cm,
+    )
+    styles = getSampleStyleSheet()
+    story = []
+
+    # Cover title
+    story.append(Paragraph(title, styles["Title"]))
+    story.append(Spacer(1, 0.5 * cm))
+
+    page_w, page_h = page_size
+    img_w = page_w - 2 * cm
+    img_h = img_w * 0.55
+
+    for idx, (name, fig) in enumerate(figures):
+        chart_title = fig.layout.title.text or name.replace("_", " ").title()
+        story.append(Paragraph(chart_title, styles["Heading2"]))
+        story.append(Spacer(1, 0.2 * cm))
+
+        # Force plotly theme so all colors are explicitly embedded
+        fig_colored = go.Figure(fig)
+        fig_colored.update_layout(
+            template="plotly",
+            paper_bgcolor="white",
+            plot_bgcolor="white",
+        )
+
+        png_bytes = _fig_to_png(fig_colored, width=1400, height=780)
+        img_buf = io.BytesIO(png_bytes)
+        rl_img = RLImage(img_buf, width=img_w, height=img_h)
+        story.append(rl_img)
+
+        if idx < len(figures) - 1:
+            story.append(PageBreak())
+
+    doc.build(story)
+    return buf.getvalue()
+
+
+def pdf_export_section(figures: List[Tuple[str, go.Figure]], section_label: str) -> None:
+    """Render a 'Download all as PDF' button in Streamlit."""
+    if not figures:
+        return
+
+    st.markdown("---")
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.caption(f"📄 Export all {len(figures)} chart(s) from **{section_label}** to a single PDF")
+    with col2:
+        if not PDF_EXPORT_AVAILABLE:
+            st.warning("Install `reportlab` & `kaleido`:\n```\npip install reportlab kaleido\n```")
+            return
+        if st.button(f"⬇️ Download PDF — {section_label}", key=f"pdf_{section_label}"):
+            with st.spinner("Rendering charts to PDF…"):
+                try:
+                    pdf_bytes = export_figures_to_pdf(figures, title=f"FABLE — {section_label}")
+                    st.download_button(
+                        label="📥 Click here to save PDF",
+                        data=pdf_bytes,
+                        file_name=f"FABLE_{safe_name(section_label)}.pdf",
+                        mime="application/pdf",
+                        key=f"dl_{section_label}",
+                    )
+                except Exception as exc:
+                    st.error(f"PDF generation failed: {exc}")
 
 
 def main() -> None:
