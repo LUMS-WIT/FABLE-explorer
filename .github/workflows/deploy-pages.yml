@@ -1,0 +1,81 @@
+name: Deploy viewer to GitHub Pages
+
+# Builds viewer/ and publishes it. The bundle it ships is whatever is committed
+# at viewer/public/data/bundle.json (refresh it with the "Rebuild bundle"
+# workflow or locally: python -m fable.compute run <workbook> --out viewer/public/data).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "viewer/**"
+      - "fable/contract/**"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+    inputs:
+      base_path:
+        description: >
+          Vite base path. Default: /<repo>/ (project site).
+          Use "/" for a user/org site or a custom domain.
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: viewer/package-lock.json
+
+      - name: Resolve base path
+        id: base
+        run: |
+          if [ -n "${{ github.event.inputs.base_path }}" ]; then
+            echo "value=${{ github.event.inputs.base_path }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=/${{ github.event.repository.name }}/" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail if no bundle is committed
+        run: |
+          test -f viewer/public/data/bundle.json || {
+            echo "::error::viewer/public/data/bundle.json is missing. Generate and commit one."
+            exit 1
+          }
+
+      - name: Build
+        working-directory: viewer
+        env:
+          VITE_BASE: ${{ steps.base.outputs.value }}
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: viewer/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

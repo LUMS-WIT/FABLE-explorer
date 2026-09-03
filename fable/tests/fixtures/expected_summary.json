@@ -1,0 +1,93 @@
+{
+  "baseline_pathway": "Current Trends",
+  "deviation_cols": 42,
+  "deviation_rows": 1973,
+  "pathways": [
+    "Current Trends",
+    "Balanced",
+    "Export Oriented Growth",
+    "Mitigation",
+    "Food Security",
+    "Net-Zero"
+  ],
+  "schema_version": "1.0.0",
+  "status": "ok",
+  "tables": {
+    "BIODIVERSITY__ResultsAgPrac": {
+      "cols": 7,
+      "rows": 66
+    },
+    "BIODIVERSITY__ResultsBioScore": {
+      "cols": 11,
+      "rows": 42
+    },
+    "BIODIVERSITY__ResultsBiodiv": {
+      "cols": 14,
+      "rows": 66
+    },
+    "BIODIVERSITY__ResultsProtectedAreas": {
+      "cols": 9,
+      "rows": 66
+    },
+    "BIODIVERSITY__ResultsTargetBiodiv": {
+      "cols": 17,
+      "rows": 54
+    },
+    "FOOD__Results_Diets": {
+      "cols": 16,
+      "rows": 1122
+    },
+    "FOOD__Total_results_diets": {
+      "cols": 21,
+      "rows": 66
+    },
+    "GHG__GWP_Conversion": {
+      "cols": 4,
+      "rows": 24
+    },
+    "GHG__ResultsGHG": {
+      "cols": 31,
+      "rows": 66
+    },
+    "JOBS__ResultsJobs": {
+      "cols": 8,
+      "rows": 66
+    },
+    "LAND__ResultsCropArea": {
+      "cols": 13,
+      "rows": 3828
+    },
+    "LAND__ResultsLand": {
+      "cols": 26,
+      "rows": 66
+    },
+    "N_and_P__ResultsNitrogen": {
+      "cols": 16,
+      "rows": 66
+    },
+    "PRODUCTION__ResultsProd": {
+      "cols": 17,
+      "rows": 5808
+    },
+    "PRODUCTION__ResultsProdCosts": {
+      "cols": 9,
+      "rows": 66
+    },
+    "PRODUCTION__TotalResultsProd": {
+      "cols": 9,
+      "rows": 66
+    },
+    "TRADE__ResultsTrade": {
+      "cols": 13,
+      "rows": 5808
+    },
+    "TRADE__TotalResultsTrade": {
+      "cols": 6,
+      "rows": 66
+    },
+    "WATER__ResultsWater": {
+      "cols": 6,
+      "rows": 66
+    }
+  }
+}

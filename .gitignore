@@ -36,3 +36,14 @@ Thumbs.db
 # Secrets / env
 .env
 *.env
+
+# Node / viewer build
+node_modules/
+viewer/dist/
+viewer/.vite/
+*.tsbuildinfo
+
+# Generated compute artifacts (bundle.json is committed under viewer/public/data
+# only when intentionally refreshed; gate.json never is)
+gate.json
+

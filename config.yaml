@@ -1,1 +1,6 @@
+# FABLE workbook + bundle settings. Consumed by src/ (legacy) and
+# fable/compute (new). Only `workbook` is required.
 workbook: workbooks/FABLEPAKUP50.xlsx
+country: Pakistan
+baseline_pathway: Current Trends
+output_dir: exports

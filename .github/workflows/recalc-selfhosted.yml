@@ -1,0 +1,98 @@
+name: Recalc (self-hosted, Excel)
+
+# Full pipeline: workbook -> recalc every pathway -> bundle.json.
+# GitHub-hosted runners have no Excel, so this needs a SELF-HOSTED runner with
+# Microsoft Excel installed and these labels: [self-hosted, windows, excel].
+#
+# One-time runner setup:
+#   Settings > Actions > Runners > New self-hosted runner (Windows)
+#   python -m pip install -e ".[excel,dev]"
+#   (open Excel once, dismiss first-run dialogs)
+#
+# Without such a runner this workflow just stays unused; bundle.yml + a locally
+# generated bundle cover the GitHub-Pages-only setup.
+
+on:
+  workflow_dispatch:
+    inputs:
+      workbook:
+        description: Path to the workbook (relative to repo root)
+        required: false
+        default: workbooks/FABLEPAKUP50.xlsx
+      workbook_url:
+        description: Optional URL to download the workbook from (overrides the path)
+        required: false
+        default: ""
+      workers:
+        description: Parallel Excel processes
+        required: false
+        default: "4"
+      max_pathways:
+        description: Limit to first N pathways (blank = all)
+        required: false
+        default: ""
+      commit:
+        description: Commit the resulting bundle.json to this branch
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  recalc:
+    runs-on: [self-hosted, windows, excel]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: python -m pip install --upgrade pip && pip install -e ".[excel,dev]"
+
+      - name: Fetch workbook
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.inputs.workbook_url }}" ]; then
+            mkdir -p workbooks
+            curl -fsSL "${{ github.event.inputs.workbook_url }}" -o "${{ github.event.inputs.workbook }}"
+          fi
+          test -f "${{ github.event.inputs.workbook }}"
+
+      - name: Run pipeline
+        shell: bash
+        run: |
+          ARGS=(--engine xlwings --workers "${{ github.event.inputs.workers }}" --out viewer/public/data)
+          [ -n "${{ github.event.inputs.max_pathways }}" ] && ARGS+=(--max-pathways "${{ github.event.inputs.max_pathways }}")
+          python -m fable.compute run "${{ github.event.inputs.workbook }}" "${ARGS[@]}"
+
+      - name: Gate summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### Publish gate'
+            echo '```json'
+            cat viewer/public/data/gate.json 2>/dev/null || echo '(no gate.json)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle-and-run
+          path: |
+            viewer/public/data/bundle.json
+            viewer/public/data/gate.json
+            exports/**
+          if-no-files-found: error
+
+      - name: Commit
+        if: ${{ github.event.inputs.commit == 'true' }}
+        shell: bash
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add viewer/public/data/bundle.json
+          git diff --cached --quiet || git commit -m "chore: recalc + rebuild viewer bundle"
+          git push

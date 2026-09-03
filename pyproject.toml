@@ -4,21 +4,33 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fable-postprocessing"
-version = "1.0.0"
-description = "Cross-platform post-processing and visualization tools for any FABLE country workbook"
+version = "2.0.0"
+description = "Post-processing, data contract, and bundle builder for any FABLE country workbook"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 
+# Runtime deps for the compute layer (recalc engine + bundle builder + gate).
+# Deliberately light so it runs in CI / minimal containers.
 dependencies = [
     "openpyxl>=3.1",
     "pandas>=2.0",
-    "plotly>=5.0",
-    "streamlit>=1.30",
-    "xlwings>=0.30",
+    "pyyaml>=6.0",
+    "jsonschema>=4.20",
 ]
 
 [project.optional-dependencies]
+# Desktop-Excel recalc engine.
+excel = [
+    "xlwings>=0.30",
+]
+# Legacy Streamlit dashboard in src/ (superseded by viewer/).
+dashboard = [
+    "plotly>=5.0",
+    "streamlit>=1.30",
+    "kaleido>=0.2",
+    "reportlab>=4.0",
+]
 notebook = [
     "jupyter>=1.0",
     "ipykernel>=6.0",
@@ -29,12 +41,20 @@ dev = [
     "pyright>=1.1",
 ]
 
+[project.scripts]
+fable-compute = "fable.compute.cli:main"
+
 [project.urls]
 Repository = "https://github.com/FABLE-Consortium/FABLE_Pakistan"
 
 [tool.setuptools]
-# No installable Python packages — project provides runnable scripts in src/
-packages = []
+packages = ["fable", "fable.compute", "fable.compute.engines"]
+
+[tool.setuptools.package-data]
+fable = ["contract/*.json", "contract/*.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["fable/tests"]
 
 [tool.pyright]
 extraPaths = ["src"]

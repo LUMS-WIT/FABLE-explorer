@@ -1,0 +1,109 @@
+name: Rebuild bundle
+
+# CSV run directory  ->  viewer/public/data/bundle.json  (+ publish gate).
+# No spreadsheet engine needed, so this runs on a normal GitHub runner.
+# Recalculating a workbook needs Excel or LibreOffice — see recalc-selfhosted.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Where the CSV run directory comes from
+        type: choice
+        options: [golden-fixture, repo-path, zip-url]
+        default: golden-fixture
+      repo_path:
+        description: "source=repo-path: path to an all_pathways_run_* directory in the repo"
+        required: false
+        default: fable/tests/fixtures/golden_run
+      zip_url:
+        description: "source=zip-url: URL of a .zip containing the run directory"
+        required: false
+        default: ""
+      country:
+        description: Country name (blank = config.yaml)
+        required: false
+        default: ""
+      baseline:
+        description: Baseline pathway (blank = config.yaml)
+        required: false
+        default: ""
+      commit:
+        description: Commit the rebuilt bundle.json to this branch
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Resolve run directory
+        id: rd
+        run: |
+          set -euo pipefail
+          case "${{ github.event.inputs.source }}" in
+            golden-fixture)
+              echo "dir=fable/tests/fixtures/golden_run" >> "$GITHUB_OUTPUT" ;;
+            repo-path)
+              test -d "${{ github.event.inputs.repo_path }}"
+              echo "dir=${{ github.event.inputs.repo_path }}" >> "$GITHUB_OUTPUT" ;;
+            zip-url)
+              curl -fsSL "${{ github.event.inputs.zip_url }}" -o /tmp/run.zip
+              mkdir -p /tmp/run && unzip -q /tmp/run.zip -d /tmp/run
+              # accept either a zip of the dir, or a zip whose single child is the dir
+              d=/tmp/run
+              if [ ! -d "$d/combined_tables" ]; then
+                d=$(find /tmp/run -maxdepth 2 -type d -name combined_tables -print -quit | xargs dirname)
+              fi
+              test -d "$d/combined_tables"
+              echo "dir=$d" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Build bundle + run gate
+        run: |
+          ARGS=(--out viewer/public/data)
+          [ -n "${{ github.event.inputs.country }}" ] && ARGS+=(--country "${{ github.event.inputs.country }}")
+          [ -n "${{ github.event.inputs.baseline }}" ] && ARGS+=(--baseline "${{ github.event.inputs.baseline }}")
+          [ -f workbooks/FABLEPAKUP50.xlsx ] && ARGS+=(--workbook workbooks/FABLEPAKUP50.xlsx)
+          python -m fable.compute bundle "${{ steps.rd.outputs.dir }}" "${ARGS[@]}"
+
+      - name: Gate summary
+        if: always()
+        run: |
+          {
+            echo '### Publish gate'
+            echo '```json'
+            cat viewer/public/data/gate.json 2>/dev/null || echo '(no gate.json)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle
+          path: |
+            viewer/public/data/bundle.json
+            viewer/public/data/gate.json
+          if-no-files-found: error
+
+      - name: Commit
+        if: ${{ github.event.inputs.commit == 'true' }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add viewer/public/data/bundle.json
+          git diff --cached --quiet || git commit -m "chore: rebuild viewer bundle"
+          git push

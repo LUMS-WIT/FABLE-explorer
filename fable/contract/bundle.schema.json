@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FABLE-Consortium/FABLE_Pakistan/fable/contract/bundle.schema.json",
+  "title": "FABLE results bundle",
+  "description": "The only stable interface between the compute layer and the viewer. Bump the MAJOR of schema_version for any breaking change; the viewer refuses an unknown major.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generator",
+    "source",
+    "pathways",
+    "baseline_pathway",
+    "tables",
+    "deviation_summary",
+    "run_quality"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "generator": { "type": "string" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workbook_filename",
+        "workbook_sha256",
+        "country",
+        "recalc_engine",
+        "run_id",
+        "generated_at"
+      ],
+      "properties": {
+        "workbook_filename": { "type": "string", "minLength": 1 },
+        "workbook_sha256": { "type": "string", "pattern": "^([0-9a-f]{64})?$" },
+        "country": { "type": "string", "minLength": 1 },
+        "recalc_engine": {
+          "type": "string",
+          "enum": ["xlwings", "libreoffice", "precomputed-csv"]
+        },
+        "run_id": { "type": "string", "minLength": 1 },
+        "generated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "pathways": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "baseline_pathway": { "type": "string", "minLength": 1 },
+    "tables": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/table" }
+    },
+    "deviation_summary": { "$ref": "#/$defs/grid" },
+    "run_quality": { "$ref": "#/$defs/runQuality" }
+  },
+  "$defs": {
+    "scalar": {
+      "type": ["string", "number", "boolean", "null"]
+    },
+    "grid": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["columns", "rows"],
+      "properties": {
+        "columns": { "type": "array", "items": { "type": "string" } },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/scalar" }
+          }
+        }
+      }
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "sheet",
+        "table",
+        "columns",
+        "rows",
+        "pathway_col",
+        "year_col",
+        "dimension_cols",
+        "numeric_cols"
+      ],
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "sheet": { "type": "string" },
+        "table": { "type": "string" },
+        "columns": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/scalar" }
+          }
+        },
+        "pathway_col": { "type": "string", "minLength": 1 },
+        "year_col": { "type": ["string", "null"] },
+        "dimension_cols": { "type": "array", "items": { "type": "string" } },
+        "numeric_cols": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "runQuality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pathways_expected",
+        "pathways_ok",
+        "pathways_failed",
+        "status",
+        "failures",
+        "checks"
+      ],
+      "properties": {
+        "pathways_expected": { "type": "integer", "minimum": 0 },
+        "pathways_ok": { "type": "integer", "minimum": 0 },
+        "pathways_failed": { "type": "integer", "minimum": 0 },
+        "status": { "type": "string", "enum": ["ok", "degraded", "failed"] },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["pathway", "error"],
+            "properties": {
+              "pathway": { "type": "string" },
+              "error": { "type": "string" }
+            }
+          }
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "ok", "detail"],
+            "properties": {
+              "name": { "type": "string" },
+              "ok": { "type": "boolean" },
+              "detail": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
