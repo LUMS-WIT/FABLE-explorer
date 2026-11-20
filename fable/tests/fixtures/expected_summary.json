@@ -1,7 +1,7 @@
 {
   "baseline_pathway": "Current Trends",
-  "deviation_cols": 42,
-  "deviation_rows": 1973,
+  "deviation_cols": 50,
+  "deviation_rows": 4818,
   "pathways": [
     "Current Trends",
     "Balanced",
@@ -10,7 +10,7 @@
     "Food Security",
     "Net-Zero"
   ],
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "status": "ok",
   "tables": {
     "BIODIVERSITY__ResultsAgPrac": {

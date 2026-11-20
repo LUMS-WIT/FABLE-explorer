@@ -86,3 +86,12 @@ def test_degraded_when_pathway_failed(bundle, tmp_path):
     assert b.run_quality.status == "degraded"
     assert b.run_quality.pathways_failed == 1
     assert gate(b).publishable is True
+
+
+def test_text_columns_are_dimensions(bundle):
+    # Guards the pandas 2 (object) vs pandas 3 (str) dtype difference: text
+    # columns such as Product must stay dimensions, never be summed over.
+    dims = {t.key: t.dimension_cols for t in bundle.tables}
+    assert "Product" in dims["PRODUCTION__ResultsProd"]
+    assert "PROD_GROUP" in dims["FOOD__Results_Diets"]
+    assert "CROP" in dims["LAND__ResultsCropArea"]

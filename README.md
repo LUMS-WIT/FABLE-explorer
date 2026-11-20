@@ -6,6 +6,7 @@ each against a baseline, and turns the result into an interactive site.
 
 - **What FABLE is:** [docs/overview.md](docs/overview.md)
 - **Pathway comparison / deviation analysis:** [docs/comparisons.md](docs/comparisons.md)
+- **IAMC-format export (common-definitions):** [docs/iamc.md](docs/iamc.md)
 - **Legacy Excel/Streamlit usage:** [docs/usage.md](docs/usage.md)
 
 ---
@@ -34,6 +35,50 @@ amber "partial run" banner — never a broken page.
 
 ---
 
+## How to launch
+
+**One-time setup** (Python 3.9+, and Microsoft Excel only if you recalculate workbooks):
+
+```bash
+python -m venv .venv
+. .venv/bin/activate                 # Windows: .venv\Scripts\activate
+pip install -e ".[excel,dev]"
+cd viewer && npm ci && npm run build && cd ..   # builds the website once (needs Node 20+)
+```
+
+Set `workbook:` and `country:` in [`config.yaml`](config.yaml).
+
+**Desktop launcher.** Double-click `Launch_Launcher.command` (macOS) or
+`Launch_Launcher.bat` (Windows), or run `python src/launcher.py`. Pick the
+workbook, type the IAMC model name (e.g. `FABLE-Pakistan v1`) and press **Run**.
+**Open viewer** shows the results in your browser.
+
+**Command line.**
+
+```bash
+# recalculate every pathway (Excel), write bundle.json and the IAMC files
+python -m fable.compute run workbooks/YOUR_COUNTRY.xlsx --model "FABLE-YourCountry v1"
+
+# no Excel: rebuild from an existing run directory
+python -m fable.compute bundle exports/all_pathways_run_XXXX --model "FABLE-YourCountry v1"
+
+# IAMC files only
+python -m fable.compute iamc exports/all_pathways_run_XXXX --model "FABLE-YourCountry v1"
+
+# open the website locally (http://127.0.0.1:8765) with the latest bundle
+python -m fable.compute view
+```
+
+Outputs:
+
+| File | What it is |
+| --- | --- |
+| `viewer/public/data/bundle.json` | everything the website shows; can also be dragged onto the published site |
+| `exports/<run>/iamc/<Model>_iamc.csv` | IAMC timeseries, all pathways ([docs/iamc.md](docs/iamc.md)) |
+| `exports/<run>/iamc/<Model>_iamc.xlsx` | the same, with about, meta and mapping sheets, for sharing |
+
+---
+
 ## What the current version does
 
 ### 1. View a results bundle — no install
@@ -41,7 +86,8 @@ amber "partial run" banner — never a broken page.
 Open the site (once deployed to GitHub Pages) or run it locally:
 
 ```bash
-cd viewer && npm ci && npm run dev      # http://localhost:5173/FABLE_Pakistan/
+python -m fable.compute view            # built site, http://127.0.0.1:8765
+cd viewer && npm ci && npm run dev      # or the dev server, http://localhost:5173/
 ```
 
 It loads the committed `viewer/public/data/bundle.json`. You can also **drag any
@@ -54,6 +100,8 @@ Tabs:
 | Overview | yes | source info, pathway list, run-quality banner, table inventory |
 | Table explorer | yes | any output table × chosen pathways; raw / Δ / % Δ vs baseline; chart + grid |
 | Deviation analysis | yes | pathways ranked by divergence from the baseline |
+| IAMC export | yes | the results as IAMC common-definitions variables; chart, table, CSV downloads |
+| Guide | yes | how to use the site, the IAMC conventions, and how to build a bundle |
 
 Workbook column names (`TotalCO2e`, `LNPPMatureForest`, …) are humanised in
 chart titles and legends; hover shows the original.
@@ -106,7 +154,7 @@ once; a killed run resumes. Details in
 
 | Status | Item |
 | --- | --- |
-| **done** | data contract + bundle builder + publish gate; parallel resumable xlwings engine; static viewer; CI + Pages workflows |
+| **done** | data contract + bundle builder + publish gate; parallel resumable xlwings engine; static viewer; CI + Pages workflows; IAMC export (files + IAMC tab) |
 | **next** | **LibreOffice engine** — headless recalc with no Excel licence, so CI (or a container) can build bundles on its own. Env probe is in place; the UNO recalc macro is specified in [fable/contract/CONTRACT.md](fable/contract/CONTRACT.md) but not written. |
 | **next** | **Upload-and-run web app** — a small API (LibreOffice engine behind FastAPI, on a free host) that takes an `.xlsx` upload, recalculates, and returns a bundle the viewer renders. This needs a server, so it is *in addition to* the static GitHub Pages viewer, not a replacement. |
 | **maybe** | **In-browser recalc** (HyperFormula / Pyodide) — true `.xlsx` upload with zero server, staying on GitHub Pages. Gated on a fidelity check against known-good outputs; may not be feasible for FABLE's formula set. |
@@ -125,7 +173,8 @@ Launch" experience arrives with the upload API above.
 
 ```
 fable/            compute layer + data contract (new)
-  compute/        engines, bundle builder, publish gate, CLI
+  compute/        engines, bundle builder, publish gate, CLI, local web server
+  iamc/           IAMC export: product table, common-definitions snapshot
   contract/       bundle.schema.json + CONTRACT.md
   tests/          golden test over a frozen Pakistan run
 viewer/           static React app (Vite + TypeScript + Plotly)

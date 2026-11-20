@@ -31,6 +31,10 @@ on:
         description: Limit to first N pathways (blank = all)
         required: false
         default: ""
+      model:
+        description: IAMC model name, e.g. "FABLE-Pakistan v1" (blank = config.yaml, else FABLE-<country>)
+        required: false
+        default: ""
       commit:
         description: Commit the resulting bundle.json to this branch
         type: boolean
@@ -63,7 +67,8 @@ jobs:
       - name: Run pipeline
         shell: bash
         run: |
-          ARGS=(--engine xlwings --workers "${{ github.event.inputs.workers }}" --out viewer/public/data)
+          ARGS=(--engine xlwings --workers "${{ github.event.inputs.workers }}" --out viewer/public/data --no-input --iamc-out iamc-out)
+          [ -n "${{ github.event.inputs.model }}" ] && ARGS+=(--model "${{ github.event.inputs.model }}")
           [ -n "${{ github.event.inputs.max_pathways }}" ] && ARGS+=(--max-pathways "${{ github.event.inputs.max_pathways }}")
           python -m fable.compute run "${{ github.event.inputs.workbook }}" "${ARGS[@]}"
 
@@ -85,6 +90,7 @@ jobs:
             viewer/public/data/bundle.json
             viewer/public/data/gate.json
             exports/**
+            iamc-out/
           if-no-files-found: error
 
       - name: Commit

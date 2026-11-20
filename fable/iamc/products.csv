@@ -1,0 +1,95 @@
+# FABLE product -> IAMC commodity group + dry-matter share (t DM / t fresh weight).
+# kind: crop = primary crop (production, trade, yield); livestock = primary livestock product;
+#       processed = secondary product (trade only, its own DM mass); exclude = not reported.
+# iamc_group: IAMC {Crop Types} or {Livestock Products} value; blank = counted in the parent total only.
+# dm_share: indicative literature values (FAO feed composition tables / Wirsenius 2000 type).
+#           Review and replace with your model's standard factors where you have them.
+product,kind,iamc_group,dm_share
+abaca,crop,Other Crops,0.90
+apple,crop,Other Crops,0.15
+banana,crop,Other Crops,0.25
+barley,crop,Cereals,0.88
+beans,crop,Other Crops,0.89
+beef,livestock,Ruminant|Meat,0.35
+cassava,crop,Other Crops,0.35
+cereal_other,crop,Cereals,0.88
+chicken,livestock,Non-Ruminant|Meat|Poultry,0.30
+chips_and__particles,exclude,,
+citrus_other,crop,Other Crops,0.13
+clove,crop,Other Crops,0.90
+cocoa,crop,Other Crops,0.93
+coconut,crop,Oil Crops,0.50
+cocooil,processed,Oil Crops,1.00
+coffee,crop,Other Crops,0.90
+corn,crop,Cereals,0.88
+cottcake,processed,Oil Crops,0.90
+cottlint,processed,Oil Crops,0.92
+cottoil,processed,Oil Crops,1.00
+cotton,crop,Oil Crops,0.92
+date,crop,Other Crops,0.80
+eggs,livestock,Non-Ruminant|Eggs,0.25
+fiber_hard_other,crop,Other Crops,0.90
+fiber_soft_other,crop,Other Crops,0.90
+fruit_other,crop,Other Crops,0.15
+grape,crop,Other Crops,0.18
+grapefruit,crop,Other Crops,0.10
+groundnut,crop,Oil Crops,0.94
+groundnutcake,processed,Oil Crops,0.90
+groundnutoil,processed,Oil Crops,1.00
+honey,livestock,,0.82
+jute,crop,Other Crops,0.90
+lemon,crop,Other Crops,0.12
+meat_other,livestock,,0.35
+mech_pulp,exclude,,
+milk,livestock,Ruminant|Dairy,0.13
+millet,crop,Cereals,0.88
+mutton_goat,livestock,Ruminant|Meat,0.35
+nuts,crop,Other Crops,0.94
+oats,crop,Cereals,0.88
+oilpalmfruit,crop,Oil Crops,0.60
+oilseed_other,crop,Oil Crops,0.92
+olive,crop,Oil Crops,0.50
+oliveoil,processed,Oil Crops,1.00
+onion,crop,Other Crops,0.11
+orange,crop,Other Crops,0.13
+other_oil,processed,Oil Crops,1.00
+other_olscake,processed,Oil Crops,0.90
+palm_oil,processed,Oil Crops,1.00
+palmkernelcake,processed,Oil Crops,0.90
+palmkerneloil,processed,Oil Crops,1.00
+peas,crop,Other Crops,0.89
+pepper,crop,Other Crops,0.90
+piment,crop,Other Crops,0.90
+pinapple,crop,Other Crops,0.14
+plantain,crop,Other Crops,0.33
+pork,livestock,Non-Ruminant|Meat|Pig,0.40
+potato,crop,Other Crops,0.22
+pulses_other,crop,Other Crops,0.89
+rapecake,processed,Oil Crops,0.89
+rapeoil,processed,Oil Crops,1.00
+rapeseed,crop,Oil Crops,0.91
+rice,crop,Cereals,0.89
+rubber,crop,Other Crops,0.60
+rye,crop,Cereals,0.88
+sesame,crop,Oil Crops,0.94
+sesamoil,processed,Oil Crops,1.00
+sisal,crop,Other Crops,0.90
+sorghum,crop,Cereals,0.88
+soyabean,crop,Oil Crops,0.91
+soycake,processed,Oil Crops,0.89
+soyoil,processed,Oil Crops,1.00
+spices_other,crop,Other Crops,0.90
+sugarbeet,crop,Sugar Crops,0.23
+sugarcane,crop,Sugar Crops,0.27
+sugarraw,processed,Sugar Crops,0.99
+sunflcake,processed,Oil Crops,0.90
+sunfloil,processed,Oil Crops,1.00
+sunflower,crop,Oil Crops,0.93
+sweet_potato,crop,Other Crops,0.30
+tea,crop,Other Crops,0.93
+tobacco,crop,Other Crops,0.90
+tomato,crop,Other Crops,0.06
+tuber_other,crop,Other Crops,0.25
+vegetable_other,crop,Other Crops,0.10
+wheat,crop,Cereals,0.88
+yams,crop,Other Crops,0.30

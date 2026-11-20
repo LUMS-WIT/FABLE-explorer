@@ -15,4 +15,4 @@ Because the stages only share a directory of CSVs, stage 1 can be swapped or
 can partially fail without stage 2 or the viewer breaking.
 """
 
-BUNDLE_SCHEMA_VERSION = "1.0.0"
+BUNDLE_SCHEMA_VERSION = "1.1.0"

@@ -118,6 +118,26 @@ table.grid tbody tr:hover { background: rgba(127,127,127,0.06); }
 .pager button { border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 6px; padding: 2px 8px; margin: 0 4px; cursor: pointer; }
 .pager button:disabled { opacity: 0.4; cursor: default; }
 
+.lead { margin: 0 0 12px; max-width: 72ch; }
+.button-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.btn { font: inherit; font-size: 13px; border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; background: var(--bg); color: var(--text); }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.toolbar label.wide select { min-width: 28ch; max-width: 100%; }
+pre.cmd { background: rgba(127,127,127,0.12); border-radius: 8px; padding: 10px 12px; font-size: 12px; overflow-x: auto; white-space: pre; margin: 8px 0; }
+ul.notes { margin: 0; padding-left: 20px; font-size: 13px; }
+.guide p, .guide li { max-width: 80ch; }
+.guide h4 { margin: 16px 0 6px; font-size: 13px; }
+.guide ul { margin: 0; padding-left: 20px; }
+table.grid.doc td { white-space: normal; }
+a { color: var(--accent); }
+@media (max-width: 640px) {
+  .content { padding: 12px; }
+  .tabs { overflow-x: auto; padding: 8px 12px 0; }
+  .kv { grid-template-columns: 1fr; gap: 2px 0; }
+  .kv dd { margin-bottom: 6px; }
+}
+
 .drop-hint {
   position: fixed; inset: auto 0 24px 0; margin: 0 auto; width: max-content;
   background: var(--accent); color: #fff; padding: 10px 20px; border-radius: 999px;

@@ -31,6 +31,7 @@ broken site. See [`contract/CONTRACT.md`](contract/CONTRACT.md).
 | `compute/engines/` | `xlwings` (Excel, parallel), `libreoffice` (headless, pending), `auto` |
 | `compute/pipeline.py` | wires the stages, writes `bundle.json` + `gate.json` |
 | `compute/cli.py` | `python -m fable.compute …` |
+| `iamc/` | IAMC-format export: FABLE → common-definitions variables ([docs/iamc.md](../docs/iamc.md)) |
 | `tests/` | golden test against a frozen 6-pathway Pakistan run |
 
 ## Commands
@@ -48,6 +49,9 @@ python -m fable.compute bundle exports/all_pathways_run_XXXX \
 
 # recalc + bundle in one step
 python -m fable.compute run workbooks/FABLEPAKUP50.xlsx --out viewer/public/data
+
+# IAMC timeseries only (bundle/run also write <run_dir>/iamc/ by default)
+python -m fable.compute iamc exports/all_pathways_run_XXXX --model "FABLE-Pakistan v1"
 
 # re-check an existing bundle against the gate
 python -m fable.compute check viewer/public/data/bundle.json

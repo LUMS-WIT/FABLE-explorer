@@ -11,9 +11,10 @@ consume:
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import asdict
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from .. import __version__
 from .bundle import build_bundle
@@ -21,7 +22,31 @@ from .engines import get_engine
 from .model import Bundle
 from .validate import GateResult, gate
 
+if TYPE_CHECKING:
+    from ..iamc import IamcOptions
+
 GENERATOR = f"fable-compute {__version__}"
+
+
+def _attach_iamc(bundle: Bundle, run_dir: Path, iamc: Optional["IamcOptions"],
+                 workbook: Optional[Path] = None) -> None:
+    """Write the IAMC files and embed the same table in the bundle.
+
+    Rides along with the bundle but can never fail it: any error is reported
+    and the bundle is published without an ``iamc`` block.
+    """
+    if iamc is None:
+        return
+    try:
+        from ..iamc import build_iamc, export_iamc
+        from ..iamc.export import bundle_section
+
+        result = build_iamc(run_dir, iamc)
+        export_iamc(run_dir, iamc, result=result, workbook=workbook)
+        bundle.iamc = bundle_section(result, iamc)
+    except Exception as exc:  # noqa: BLE001
+        print(f"IAMC export failed (bundle unaffected): {type(exc).__name__}: {exc}",
+              file=sys.stderr)
 
 
 def _load_previous(path: Optional[Path]) -> Optional[Bundle]:
@@ -58,6 +83,7 @@ def _load_previous(path: Optional[Path]) -> Optional[Bundle]:
             ),
             schema_version=raw.get("schema_version", "1.0.0"),
             generator=raw.get("generator", ""),
+            iamc=raw.get("iamc"),
         )
     except Exception:
         return None
@@ -80,6 +106,7 @@ def bundle_from_run_dir(
     recalc_engine: str = "precomputed-csv",
     baseline_pathway: Optional[str] = None,
     previous_bundle: Optional[Path] = None,
+    iamc: Optional["IamcOptions"] = None,
 ) -> tuple[Bundle, GateResult]:
     bundle = build_bundle(
         run_dir,
@@ -89,6 +116,7 @@ def bundle_from_run_dir(
         baseline_pathway=baseline_pathway,
         generator=GENERATOR,
     )
+    _attach_iamc(bundle, run_dir, iamc, workbook_path)
     result = gate(bundle, previous=_load_previous(previous_bundle))
     _write_artifacts(bundle, result, out_dir)
     return bundle, result
@@ -106,6 +134,7 @@ def run_pipeline(
     workers: int = 1,
     pathway_slice: Optional[tuple[int, int]] = None,
     previous_bundle: Optional[Path] = None,
+    iamc: Optional["IamcOptions"] = None,
 ) -> tuple[Bundle, GateResult]:
     eng = get_engine(engine)
     output_root = output_root or (workbook_path.parent / "exports")
@@ -124,4 +153,5 @@ def run_pipeline(
         recalc_engine=eng.name,
         baseline_pathway=baseline_pathway,
         previous_bundle=previous_bundle,
+        iamc=iamc,
     )

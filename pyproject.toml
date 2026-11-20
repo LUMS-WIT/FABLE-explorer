@@ -48,10 +48,12 @@ fable-compute = "fable.compute.cli:main"
 Repository = "https://github.com/FABLE-Consortium/FABLE_Pakistan"
 
 [tool.setuptools]
-packages = ["fable", "fable.compute", "fable.compute.engines"]
+packages = ["fable", "fable.compute", "fable.compute.engines", "fable.iamc"]
+
 
 [tool.setuptools.package-data]
 fable = ["contract/*.json", "contract/*.md"]
+"fable.iamc" = ["*.csv"]
 
 [tool.pytest.ini_options]
 testpaths = ["fable/tests"]

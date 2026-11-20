@@ -4,3 +4,13 @@ workbook: workbooks/FABLEPAKUP50.xlsx
 country: Pakistan
 baseline_pathway: Current Trends
 output_dir: exports
+
+# IAMC-format export (common-definitions), written to <run_dir>/iamc/ on every
+# `bundle` / `run`. Leave `model` blank to be asked at run time; otherwise
+# FABLE-<country> is used. Scenario names default to the pathway names.
+iamc:
+  enabled: true
+  model:
+  region:            # blank -> country
+  kyoto_gwp: AR4     # GWP-100 basis for Emissions|Kyoto Gases (SAR | AR4 | AR5 | AR6)
+  scenario_names: {} # e.g. {Current Trends: Baseline}

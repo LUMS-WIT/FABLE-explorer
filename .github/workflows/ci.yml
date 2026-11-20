@@ -34,7 +34,9 @@ jobs:
           python -m fable.compute bundle fable/tests/fixtures/golden_run \
             --workbook workbooks/FABLEPAKUP50.xlsx \
             --country Pakistan --baseline "Current Trends" \
+            --model "FABLE-Pakistan" --iamc-out /tmp/iamc-out --no-input \
             --out /tmp/bundle-out
+          test -f /tmp/iamc-out/FABLE_Pakistan_iamc.csv
         # exit code is non-zero if the gate rejects the bundle
 
   viewer:

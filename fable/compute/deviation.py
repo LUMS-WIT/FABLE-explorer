@@ -14,6 +14,13 @@ from typing import Dict, List, Optional, Sequence, Tuple
 import pandas as pd
 
 RUN_PATHWAY_COL = "RunPathway"
+
+
+def is_text_column(series: pd.Series) -> bool:
+    """True for text columns under pandas 2 (object dtype) and 3 (str dtype)."""
+    return pd.api.types.is_object_dtype(series) or pd.api.types.is_string_dtype(series)
+
+
 DEFAULT_BASELINE_PATHWAY = "CurrentTrends"
 
 
@@ -184,7 +191,7 @@ def export_scenario_deviation_summary(
         dimension_cols = [
             column
             for column in df.columns
-            if column != pathway_col and (df[column].dtype == object or column == year_col)
+            if column != pathway_col and (is_text_column(df[column]) or column == year_col)
         ]
 
         numeric_cols: List[str] = []

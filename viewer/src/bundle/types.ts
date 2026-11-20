@@ -51,6 +51,25 @@ export interface RunQuality {
   checks: QualityCheck[];
 }
 
+export interface IamcScenario {
+  scenario: string;
+  pathway: string;
+}
+
+// Optional since schema 1.1.0: results mapped to IAMC common-definitions.
+export interface IamcSection {
+  model: string;
+  region: string;
+  kyoto_gwp: string;
+  definitions: string;
+  scenarios: IamcScenario[];
+  /** wide table: Model, Scenario, Region, Variable, Unit, then one column per year */
+  data: Grid;
+  /** variable, unit, source, note */
+  mapping: Grid;
+  notes: string[];
+}
+
 export interface Bundle {
   schema_version: string;
   generator: string;
@@ -60,6 +79,7 @@ export interface Bundle {
   tables: Table[];
   deviation_summary: Grid;
   run_quality: RunQuality;
+  iamc?: IamcSection;
 }
 
 export function major(version: string): number {

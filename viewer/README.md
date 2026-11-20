@@ -9,7 +9,7 @@ and renders it. No backend — deploys to GitHub Pages as static files.
 ```bash
 cd viewer
 npm install
-npm run dev            # http://localhost:5173/FABLE_Pakistan/
+npm run dev            # http://localhost:5173/
 ```
 
 It loads `public/data/bundle.json` on start. Refresh it with:
@@ -27,8 +27,9 @@ npm run build          # -> viewer/dist/
 VITE_BASE=/ npm run build   # for a custom domain / user-site root
 ```
 
-`VITE_BASE` defaults to `/FABLE_Pakistan/` (GitHub project-site path). Set it to
-`/` for `username.github.io` or a custom domain.
+`VITE_BASE` defaults to `./` (relative), so the built site works under any path:
+a GitHub project site, a custom domain, or `python -m fable.compute view`, which
+serves `dist/` on http://127.0.0.1:8765 with the latest `public/data/bundle.json`.
 
 ## Tabs
 
@@ -37,6 +38,8 @@ VITE_BASE=/ npm run build   # for a custom domain / user-site root
 | Overview | yes | source metadata, pathway list, run-quality banner, table inventory |
 | Table explorer | yes | any output table × chosen pathways, raw / Δ / %Δ vs baseline, line chart + grid |
 | Deviation analysis | yes | ranked pathway-vs-baseline divergence from `deviation_summary` |
+| IAMC export | yes | `bundle.iamc` (schema 1.1.0+): IAMC variables, chart, table, CSV downloads; explains how to rebuild when absent |
+| Guide | yes | user documentation for the site and the IAMC conventions |
 
 ## Robustness
 

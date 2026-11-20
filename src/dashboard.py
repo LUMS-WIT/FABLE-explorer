@@ -271,7 +271,7 @@ def build_deviation_figure(
             if pd.isna(value):
                 filtered_df = filtered_df[filtered_df[col].isna()]
             else:
-                if filtered_df[col].dtype == object:
+                if (pd.api.types.is_object_dtype(filtered_df[col]) or pd.api.types.is_string_dtype(filtered_df[col])):
                     filtered_df = filtered_df[
                         filtered_df[col].astype(str) == str(value)
                     ]
@@ -401,7 +401,7 @@ def prep_plot_df(
     for c in out.columns:
         if c in group_cols:
             continue
-        if out[c].dtype == object:
+        if (pd.api.types.is_object_dtype(out[c]) or pd.api.types.is_string_dtype(out[c])):
             continue
         numeric_cols.append(c)
 
@@ -409,7 +409,7 @@ def prep_plot_df(
     for c in out.columns:
         if c in group_cols:
             continue
-        if out[c].dtype == object:
+        if (pd.api.types.is_object_dtype(out[c]) or pd.api.types.is_string_dtype(out[c])):
             out[c] = pd.to_numeric(out[c], errors="coerce")
 
     numeric_cols = [c for c in out.columns if c not in group_cols and out[c].dtype != object]
@@ -1251,7 +1251,7 @@ def combined_tables_tab(run_dir: Path) -> None:
     year_col = detect_year_col(df.columns.tolist())
     cat_cols = [
         c for c in df.columns
-        if c not in {pathway_col, year_col} and df[c].dtype == object
+        if c not in {pathway_col, year_col} and (pd.api.types.is_object_dtype(df[c]) or pd.api.types.is_string_dtype(df[c]))
     ]
     numeric_cols: List[str] = [
         c for c in df.columns

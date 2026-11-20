@@ -1,6 +1,33 @@
 import { useMemo, useState } from "react";
 import { Bundle } from "../bundle/types";
-import { BaselineMode, buildSeries, toObjects, uniqueStrings } from "../lib/table";
+import { BaselineMode, Row, buildSeries, num, toObjects, uniqueStrings } from "../lib/table";
+
+// First metric whose values actually vary, so the opening chart is not flat.
+function defaultMetric(rows: Row[], cols: string[]): string {
+  for (const c of cols) {
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const r of rows) {
+      const v = num(r[c]);
+      if (v === null) continue;
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+      if (hi > lo) return c;
+    }
+  }
+  return cols[0] ?? "";
+}
+
+// Dimension values ordered by size of the metric, largest first.
+function byMagnitude(rows: Row[], dim: string, metric: string): string[] {
+  const tot = new Map<string, number>();
+  for (const r of rows) {
+    const k = r[dim];
+    if (typeof k !== "string" || !k) continue;
+    tot.set(k, (tot.get(k) ?? 0) + Math.abs(num(r[metric]) ?? 0));
+  }
+  return [...tot.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
+}
 import { prettyLabel, prettyTableKey } from "../lib/labels";
 import Chart, { seriesColor } from "./Chart";
 import DataGrid from "./DataGrid";
@@ -17,16 +44,40 @@ export default function TableExplorer({ bundle }: { bundle: Bundle }) {
   const [mode, setMode] = useState<BaselineMode>("raw");
 
   const xCol = table?.year_col ?? table?.dimension_cols[0] ?? table?.columns[1] ?? "";
-  const [metric, setMetric] = useState(table?.numeric_cols[0] ?? "");
+  const [metric, setMetric] = useState<string | null>(null);
 
   // secondary dimension filters (everything dimensional except the x axis)
   const extraDims = (table?.dimension_cols ?? []).filter((d) => d !== xCol);
   const rowsObj = useMemo(() => (table ? toObjects(table) : []), [table]);
   const [dimFilter, setDimFilter] = useState<Record<string, string>>({});
 
-  const effMetric = table?.numeric_cols.includes(metric)
-    ? metric
-    : table?.numeric_cols[0] ?? "";
+  const effMetric = useMemo(() => {
+    const cols = table?.numeric_cols ?? [];
+    if (metric && cols.includes(metric)) return metric;
+    return defaultMetric(rowsObj, cols);
+  }, [table, metric, rowsObj]);
+
+  // One line per pathway needs exactly one row per x value, so every extra
+  // dimension with several values gets a selector. Selectors cascade: each
+  // lists only values present under the earlier choices, defaulting to the first.
+  const dimChoices = useMemo(() => {
+    const out: { dim: string; options: string[]; value: string }[] = [];
+    let pool = rowsObj;
+    for (const d of extraDims) {
+      if (uniqueStrings(pool, d).length < 2) continue;
+      const options = byMagnitude(pool, d, effMetric);
+      const want = dimFilter[d];
+      const value = want !== undefined && options.includes(want) ? want : options[0];
+      out.push({ dim: d, options, value });
+      pool = pool.filter((r) => String(r[d] ?? "") === value);
+    }
+    return out;
+  }, [rowsObj, extraDims.join("\u0000"), dimFilter, effMetric]);
+  const effFilter = useMemo(
+    () => Object.fromEntries(dimChoices.map((c) => [c.dim, c.value])),
+    [dimChoices],
+  );
+
 
   const series = useMemo(() => {
     if (!table || !effMetric) return [];
@@ -35,9 +86,9 @@ export default function TableExplorer({ bundle }: { bundle: Bundle }) {
       xCol,
       baseline,
       mode,
-      filters: dimFilter,
+      filters: effFilter,
     });
-  }, [table, effMetric, bundle.pathways, selected, xCol, baseline, mode, dimFilter]);
+  }, [table, effMetric, bundle.pathways, selected, xCol, baseline, mode, effFilter]);
 
   const chartData = series.map((s) => {
     const idx = bundle.pathways.indexOf(s.pathway);
@@ -66,7 +117,7 @@ export default function TableExplorer({ bundle }: { bundle: Bundle }) {
       <div className="toolbar">
         <label>
           Table
-          <select value={tableKey} onChange={(e) => { setTableKey(e.target.value); setDimFilter({}); }}>
+          <select value={tableKey} onChange={(e) => { setTableKey(e.target.value); setDimFilter({}); setMetric(null); }}>
             {bundle.tables.map((t) => (
               <option key={t.key} value={t.key}>
                 {prettyTableKey(t.key)}
@@ -85,24 +136,14 @@ export default function TableExplorer({ bundle }: { bundle: Bundle }) {
           </select>
         </label>
         <span className="muted">x-axis: {prettyLabel(xCol)}</span>
-        {extraDims.map((d) => {
-          const opts = uniqueStrings(rowsObj, d);
-          if (opts.length < 2) return null;
+        {dimChoices.map(({ dim: d, options: opts, value }) => {
           return (
             <label key={d}>
               {prettyLabel(d)}
               <select
-                value={dimFilter[d] ?? ""}
-                onChange={(e) =>
-                  setDimFilter((f) => {
-                    const n = { ...f };
-                    if (e.target.value) n[d] = e.target.value;
-                    else delete n[d];
-                    return n;
-                  })
-                }
+                value={value}
+                onChange={(e) => setDimFilter((f) => ({ ...f, [d]: e.target.value }))}
               >
-                <option value="">(all)</option>
                 {opts.map((o) => (
                   <option key={o} value={o}>
                     {o}
@@ -133,7 +174,7 @@ export default function TableExplorer({ bundle }: { bundle: Bundle }) {
       <div className="card">
         <Chart
           data={chartData}
-          title={`${prettyTableKey(table.key)} — ${prettyLabel(effMetric)}`}
+          title={`${prettyTableKey(table.key)} — ${prettyLabel(effMetric)}${dimChoices.length ? ` (${dimChoices.map((c) => c.value).join(", ")})` : ""}`}
           xTitle={prettyLabel(xCol)}
           yTitle={yTitle}
         />

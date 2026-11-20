@@ -29,6 +29,7 @@ from .deviation import (
     detect_pathway_col,
     detect_year_col,
     export_scenario_deviation_summary,
+    is_text_column,
 )
 from .model import (
     Bundle,
@@ -67,7 +68,7 @@ def _classify_columns(df: pd.DataFrame, pathway_col: str):
     dimension_cols = [
         c
         for c in df.columns
-        if c != pathway_col and (df[c].dtype == object or c == year_col)
+        if c != pathway_col and (is_text_column(df[c]) or c == year_col)
     ]
     numeric_cols: List[str] = []
     for c in df.columns:
@@ -245,6 +246,12 @@ def build_bundle(
             dev_df = None
     if dev_df is None:
         dev_df = pd.DataFrame()
+    # Rows where every pathway has the same value carry no deviation; with
+    # product-level dimensions they are most of the summary, so leave them out
+    # of the bundle to keep it small. The legacy CSV export still has them.
+    if "SpreadAbs" in dev_df.columns:
+        spread = pd.to_numeric(dev_df["SpreadAbs"], errors="coerce")
+        dev_df = dev_df[~(spread == 0)].reset_index(drop=True)
     dev_df.columns = [str(c) for c in dev_df.columns]
     deviation_summary = Grid(
         columns=dev_df.columns.tolist(),

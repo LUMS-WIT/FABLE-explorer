@@ -129,12 +129,14 @@ class Bundle:
     run_quality: RunQuality
     schema_version: str = BUNDLE_SCHEMA_VERSION
     generator: str = ""
+    # Optional IAMC-format view of the results (schema >= 1.1.0); see fable/iamc.
+    iamc: Optional[Dict[str, Any]] = None
 
     # ---- serialisation -------------------------------------------------
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
         # asdict already recursed; just make sure key order is stable-ish
-        return {
+        out = {
             "schema_version": d["schema_version"],
             "generator": d["generator"],
             "source": d["source"],
@@ -144,6 +146,9 @@ class Bundle:
             "deviation_summary": d["deviation_summary"],
             "run_quality": d["run_quality"],
         }
+        if self.iamc is not None:
+            out["iamc"] = self.iamc
+        return out
 
     def to_json(self, *, indent: Optional[int] = None) -> str:
         return json.dumps(

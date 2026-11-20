@@ -1,3 +1,6 @@
+> **Legacy.** This page describes the old Windows-only runner and Streamlit dashboard.
+> For the current tool see [How to launch](../README.md#how-to-launch).
+
 # Usage Guide
 
 ## Prerequisites

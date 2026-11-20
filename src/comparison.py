@@ -182,7 +182,7 @@ def export_scenario_deviation_summary(
         dimension_cols = [
             column
             for column in df.columns
-            if column != pathway_col and (df[column].dtype == object or column == year_col)
+            if column != pathway_col and ((pd.api.types.is_object_dtype(df[column]) or pd.api.types.is_string_dtype(df[column])) or column == year_col)
         ]
 
         numeric_cols: List[str] = []

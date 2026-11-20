@@ -24,7 +24,7 @@ The viewer checks `major(bundle) === major(supported)` before rendering.
 
 ```jsonc
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "generator": "fable-compute 2.0.0",
   "source": {
     "workbook_filename": "FABLEPAKUP50.xlsx",
@@ -68,6 +68,26 @@ Columnar. One row per (pathway × year × dimension) tuple.
 
 Used for `deviation_summary` — the ranked pathway-vs-baseline table produced by
 `fable/compute/deviation.py`. Columns are that function's output verbatim.
+Rows where every pathway has the same value (`SpreadAbs == 0`) are left out.
+
+### IAMC (optional, since 1.1.0)
+
+```jsonc
+"iamc": {
+  "model": "FABLE-Pakistan v1",
+  "region": "Pakistan",
+  "kyoto_gwp": "AR4",
+  "definitions": "IAMconsortium/common-definitions @ <commit>",
+  "scenarios": [ { "scenario": "Current Trends", "pathway": "Current Trends" }, ... ],
+  "data":    Grid,   // Model, Scenario, Region, Variable, Unit, "2000", "2005", ...
+  "mapping": Grid,   // variable, unit, source, note
+  "notes":   ["..."]
+}
+```
+
+Present when the bundle was built with the IAMC export on (the default). The
+viewer's IAMC tab reads it; bundles without it still render. See
+[`docs/iamc.md`](../../docs/iamc.md).
 
 ### RunQuality
 

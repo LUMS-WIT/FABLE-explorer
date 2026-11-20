@@ -11,12 +11,16 @@ import QualityBanner from "./components/QualityBanner";
 import Overview from "./components/Overview";
 import TableExplorer from "./components/TableExplorer";
 import DeviationAnalysis from "./components/DeviationAnalysis";
+import IamcExport from "./components/IamcExport";
+import Guide from "./components/Guide";
 
-type Tab = "overview" | "explore" | "deviation";
+type Tab = "overview" | "explore" | "deviation" | "iamc" | "guide";
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
   { id: "explore", label: "Table explorer" },
   { id: "deviation", label: "Deviation analysis" },
+  { id: "iamc", label: "IAMC export" },
+  { id: "guide", label: "Guide" },
 ];
 
 export default function App() {
@@ -88,9 +92,9 @@ export default function App() {
         </label>
       </header>
 
-      {bundle && (
+      {(bundle || (!loading && error)) && (
         <nav className="tabs">
-          {TABS.map((t) => (
+          {TABS.filter((t) => bundle || t.id === "guide").map((t) => (
             <button
               key={t.id}
               className={tab === t.id ? "tab-on" : ""}
@@ -105,7 +109,7 @@ export default function App() {
       <main className="content">
         {loading && <p className="muted">Loading bundle…</p>}
 
-        {!loading && error && (
+        {!loading && error && tab !== "guide" && (
           <div className="card error">
             <h3>Could not load a bundle</h3>
             <p>{error}</p>
@@ -117,13 +121,17 @@ export default function App() {
           </div>
         )}
 
-        {!loading && bundle && (
-          <>
+        {!loading && tab === "guide" && <Guide bundle={bundle} />}
+
+        {!loading && bundle && tab !== "guide" && (
+          // keyed on the bundle so every view resets when another file is opened
+          <div key={`${bundle.source.run_id}|${bundle.source.generated_at}`}>
             <QualityBanner q={bundle.run_quality} />
             {tab === "overview" && <Overview bundle={bundle} />}
             {tab === "explore" && <TableExplorer bundle={bundle} />}
             {tab === "deviation" && <DeviationAnalysis bundle={bundle} />}
-          </>
+            {tab === "iamc" && <IamcExport bundle={bundle} />}
+          </div>
         )}
       </main>
 
