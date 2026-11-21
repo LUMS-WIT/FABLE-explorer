@@ -35,7 +35,9 @@ serves `dist/` on http://127.0.0.1:8765 with the latest `public/data/bundle.json
 
 | Tab | Country-agnostic? | What it shows |
 | --- | --- | --- |
-| Overview | yes | source metadata, pathway list, run-quality banner, table inventory |
+| Summary | IAMC block | dot strip of every pathway on the headline indicators, rule-based statements, scorecard |
+| Compare pathways | IAMC block | ranked bars, trajectories, composition of a total, head to head |
+| Overview (Run details) | yes | source metadata, pathway list, run-quality banner, table inventory |
 | Table explorer | yes | any output table × chosen pathways, raw / Δ / %Δ vs baseline, line chart + grid |
 | Deviation analysis | yes | ranked pathway-vs-baseline divergence from `deviation_summary` |
 | IAMC export | yes | `bundle.iamc` (schema 1.1.0+): IAMC variables, chart, table, CSV downloads; explains how to rebuild when absent |

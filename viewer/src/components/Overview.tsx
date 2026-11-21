@@ -14,7 +14,7 @@ export default function Overview({ bundle }: { bundle: Bundle }) {
           <dt>Recalc engine</dt><dd>{s.recalc_engine}</dd>
           <dt>Run</dt><dd><code>{s.run_id}</code></dd>
           <dt>Generated</dt><dd>{fmtDate(s.generated_at)}</dd>
-          <dt>Schema</dt><dd>v{bundle.schema_version} · {bundle.generator}</dd>
+          <dt>Schema</dt><dd>v{bundle.schema_version}, {bundle.generator}</dd>
           {s.workbook_sha256 && (
             <>
               <dt>Workbook SHA-256</dt>
@@ -30,7 +30,7 @@ export default function Overview({ bundle }: { bundle: Bundle }) {
           {bundle.pathways.map((p) => (
             <li key={p} className={p === bundle.baseline_pathway ? "tag base" : "tag"}>
               {p}
-              {p === bundle.baseline_pathway ? " · baseline" : ""}
+              {p === bundle.baseline_pathway ? " (baseline)" : ""}
             </li>
           ))}
         </ul>

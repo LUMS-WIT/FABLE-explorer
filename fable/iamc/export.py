@@ -488,6 +488,8 @@ class IamcResult:
     notes: List[str]
     invalid: List[Tuple[str, str]]
     scenario_to_pathway: Dict[str, str] = field(default_factory=dict)
+    # scenario -> {lever: value}, from <run_dir>/pathway_levers.csv when present
+    levers: Dict[str, Dict[str, str]] = field(default_factory=dict)
 
 
 def build_iamc(run_dir: Path, opts: IamcOptions) -> IamcResult:
@@ -525,7 +527,18 @@ def build_iamc(run_dir: Path, opts: IamcOptions) -> IamcResult:
         [(v, u, s, n) for (v, u), (s, n) in sorted(c.report.items())],
         columns=["variable", "unit", "source", "note"],
     )
-    return IamcResult(df, mapping, c.notes, invalid, scen_map)
+    levers: Dict[str, Dict[str, str]] = {}
+    try:
+        from fable.compute.design import read_levers
+
+        lv = read_levers(run_dir)
+        if lv is not None and "PATHWAY" in lv.columns:
+            by_path = {str(r["PATHWAY"]): {k: str(v) for k, v in r.items() if k != "PATHWAY"}
+                       for r in lv.to_dict("records")}
+            levers = {s: by_path[p] for s, p in scen_map.items() if p in by_path}
+    except Exception as exc:  # meta is a bonus; never fail the export on it
+        c.notes.append(f"lever settings not read: {exc}")
+    return IamcResult(df, mapping, c.notes, invalid, scen_map, levers)
 
 
 def to_wide(long: pd.DataFrame) -> pd.DataFrame:
@@ -577,9 +590,10 @@ def _format_xlsx(path: Path) -> None:
         ws = wb["data"]
         ws.freeze_panes = "F2"
         ws.auto_filter.ref = ws.dimensions
-        for row in ws.iter_rows(min_row=2, min_col=6):
-            for cell in row:
-                cell.number_format = "#,##0.000"
+        if ws.max_row <= 20_000:  # per-cell formats are slow; large files keep Excel's default
+            for row in ws.iter_rows(min_row=2, min_col=6):
+                for cell in row:
+                    cell.number_format = "#,##0.000"
         for col in range(6, ws.max_column + 1):
             ws.column_dimensions[ws.cell(1, col).column_letter].width = 11
     if "about" in wb.sheetnames:
@@ -608,6 +622,10 @@ def write_iamc(result: IamcResult, out_dir: Path, opts: IamcOptions,
         "fable_pathway": [result.scenario_to_pathway.get(s, s) for s in scen],
         "exclude": False,
     })
+    if result.levers:  # one column per scenario lever, as pyam meta indicators
+        keys = list(next(iter(result.levers.values())).keys())
+        for k in keys:
+            meta[k] = [result.levers.get(s, {}).get(k, "") for s in scen]
     about = [("Model", opts.model), ("Region", opts.region)]
     about += [(k, v) for k, v in (source or {}).items() if v]
     about += [("Scenarios", ", ".join(scen)),
@@ -642,7 +660,10 @@ def bundle_section(result: IamcResult, opts: IamcOptions) -> Dict[str, object]:
         "region": opts.region,
         "kyoto_gwp": opts.kyoto_gwp,
         "definitions": definitions_revision(),
-        "scenarios": [{"scenario": s, "pathway": p} for s, p in result.scenario_to_pathway.items()],
+        "scenarios": [
+            {"scenario": s, "pathway": p, **({"levers": result.levers[s]} if s in result.levers else {})}
+            for s, p in result.scenario_to_pathway.items()
+        ],
         "data": {
             "columns": [str(c) for c in wide.columns],
             "rows": [[_clean(v) for v in r] for r in wide.astype(object).itertuples(index=False)],

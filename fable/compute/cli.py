@@ -7,6 +7,11 @@
     check   BUNDLE_JSON     re-run the publish gate on an existing bundle
     iamc    RUN_DIR         CSV run directory -> IAMC-format timeseries only
     view                    open the built viewer at http://127.0.0.1 with the current bundle
+    pathways levers|template|sample|factorial WORKBOOK
+                            list scenario levers, or write a pathway design CSV
+
+Thousands of pathways: write a design with `pathways sample` or `pathways
+factorial`, then `run WORKBOOK --design design.csv --workers N`.
 
 ``bundle`` and ``run`` also write IAMC files to <run_dir>/iamc/ unless
 ``--no-iamc`` is given or config.yaml sets ``iamc: {enabled: false}``.
@@ -100,6 +105,8 @@ def cmd_recalc(args: argparse.Namespace) -> int:
         workers=args.workers,
         pathway_slice=_parse_slice(args.pathway_slice),
         run_dir=args.run_dir,
+        design=args.design,
+        base_pathway=args.base_pathway,
     )
     print(run_dir)
     return 0
@@ -132,6 +139,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         print("no workbook given and config.yaml has none", file=sys.stderr)
         return 2
     country = args.country or cfg.country
+    if args.design:  # fail fast on a bad design, before Excel starts
+        _check_design(Path(workbook), args.design, args.base_pathway)
     iamc = _iamc_opts(args, cfg, country)  # ask before the long recalc, not after
     bundle, result = run_pipeline(
         Path(workbook),
@@ -145,6 +154,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         pathway_slice=_parse_slice(args.pathway_slice),
         previous_bundle=args.previous,
         iamc=iamc,
+        design=args.design,
+        base_pathway=args.base_pathway,
     )
     print(f"wrote {args.out / 'bundle.json'} (status={bundle.run_quality.status})")
     _print_gate(result)
@@ -176,6 +187,52 @@ def cmd_iamc(args: argparse.Namespace) -> int:
     return 0
 
 
+def _check_design(workbook: Path, design: Path, base: Optional[str]) -> int:
+    from .design import load_design, read_pathway_table
+
+    table = read_pathway_table(workbook)
+    rows = load_design(design, table, base=base)
+    print(f"design {design.name}: {len(rows)} pathways, {len(table.levers)} levers, all values valid",
+          file=sys.stderr)
+    return len(rows)
+
+
+def cmd_pathways(args: argparse.Namespace) -> int:
+    from . import design as dz
+
+    cfg = load_config()
+    workbook = Path(args.workbook or cfg.workbook or "")
+    if not workbook.exists():
+        print(f"workbook not found: {workbook}", file=sys.stderr)
+        return 2
+    print(f"reading levers from {workbook.name} ...", file=sys.stderr)
+    table = dz.read_pathway_table(workbook)
+    if args.action == "levers":
+        print(dz.describe(table))
+        return 0
+    if args.action == "check":
+        if not args.design:
+            print("check needs --design FILE", file=sys.stderr)
+            return 2
+        _check_design(workbook, args.design, args.base_pathway)
+        return 0
+    vary = [v for v in (args.vary or "").split(",") if v.strip()]
+    if args.action == "template":
+        df = dz.template(table)
+    elif args.action == "factorial":
+        if not vary:
+            print("factorial needs --vary LEVER,LEVER,...", file=sys.stderr)
+            return 2
+        df = dz.factorial(table, vary, base=args.base_pathway, prefix=args.prefix)
+    else:
+        df = dz.sample(table, args.n, vary=vary or None, base=args.base_pathway,
+                       seed=args.seed, prefix=args.prefix)
+    out = args.output or Path(f"pathways_{args.action}.csv")
+    df.to_csv(out, index=False)
+    print(f"wrote {out} ({len(df)} pathways x {len(table.levers)} levers)")
+    return 0
+
+
 def cmd_view(args: argparse.Namespace) -> int:
     from .serve import serve_forever
 
@@ -199,6 +256,10 @@ def build_parser() -> argparse.ArgumentParser:
                     help="parallel spreadsheet processes (xlwings engine)")
     pr.add_argument("--pathway-slice", default=None, metavar="START:STOP",
                     help="index range of pathways for multi-machine sharding")
+    pr.add_argument("--design", type=Path, default=None,
+                    help="CSV of pathways (PATHWAY + lever columns) to run instead of the workbook's own")
+    pr.add_argument("--base-pathway", default=None,
+                    help="workbook pathway that fills levers missing from --design (default: first)")
     pr.add_argument("--run-dir", type=Path, default=None,
                     help="reuse/resume an existing run directory")
     pr.set_defaults(func=cmd_recalc)
@@ -218,6 +279,10 @@ def build_parser() -> argparse.ArgumentParser:
                      help="parallel spreadsheet processes (xlwings engine)")
     prun.add_argument("--pathway-slice", default=None, metavar="START:STOP",
                      help="index range of pathways for multi-machine sharding")
+    prun.add_argument("--design", type=Path, default=None,
+                    help="CSV of pathways (PATHWAY + lever columns) to run instead of the workbook's own")
+    prun.add_argument("--base-pathway", default=None,
+                    help="workbook pathway that fills levers missing from --design (default: first)")
     _add_common(prun)
     prun.set_defaults(func=cmd_run)
 
@@ -231,6 +296,27 @@ def build_parser() -> argparse.ArgumentParser:
     pi.add_argument("--country", default=None, help="override country name")
     _add_iamc(pi)
     pi.set_defaults(func=cmd_iamc)
+
+    pp = sub.add_parser("pathways", help="list scenario levers or write a pathway design CSV",
+                        description=(
+                            "levers     list every lever and its allowed options\n"
+                            "template   write the workbook's own pathways as a design CSV to edit\n"
+                            "sample     N random distinct combinations (balanced per lever)\n"
+                            "factorial  every combination of the --vary levers\n"
+                            "check      validate a design CSV against the workbook"),
+                        formatter_class=argparse.RawDescriptionHelpFormatter)
+    pp.add_argument("action", choices=["levers", "template", "sample", "factorial", "check"])
+    pp.add_argument("workbook", nargs="?", default=None)
+    pp.add_argument("-o", "--output", type=Path, default=None, help="design CSV to write")
+    pp.add_argument("-n", type=int, default=100, help="sample: number of pathways")
+    pp.add_argument("--vary", default="", help="comma-separated lever keys (default for sample: all "
+                                               "levers except BaseYear, GWP, Price)")
+    pp.add_argument("--base-pathway", default=None,
+                    help="workbook pathway that supplies levers not varied (default: first)")
+    pp.add_argument("--seed", type=int, default=1)
+    pp.add_argument("--prefix", default="P", help="pathway name prefix (P0001, P0002, ...)")
+    pp.add_argument("--design", type=Path, default=None, help="check: design CSV to validate")
+    pp.set_defaults(func=cmd_pathways)
 
     pv = sub.add_parser("view", help="serve the built viewer locally with the current bundle")
     pv.add_argument("--data", type=Path, default=None,

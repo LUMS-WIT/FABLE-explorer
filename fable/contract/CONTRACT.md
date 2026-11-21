@@ -70,6 +70,14 @@ Used for `deviation_summary` — the ranked pathway-vs-baseline table produced b
 `fable/compute/deviation.py`. Columns are that function's output verbatim.
 Rows where every pathway has the same value (`SpreadAbs == 0`) are left out.
 
+### table_pathways (optional, since 1.2.0)
+
+For runs with more than 25 pathways, raw `tables` and `deviation_summary` cover
+the baseline plus the first 24 pathways only; `table_pathways` lists them. The
+per-pathway `Value__*` columns are dropped from the deviation summary. The
+`iamc` block always covers every pathway. Floats in the bundle are stored to 6
+significant figures.
+
 ### IAMC (optional, since 1.1.0)
 
 ```jsonc
@@ -78,7 +86,8 @@ Rows where every pathway has the same value (`SpreadAbs == 0`) are left out.
   "region": "Pakistan",
   "kyoto_gwp": "AR4",
   "definitions": "IAMconsortium/common-definitions @ <commit>",
-  "scenarios": [ { "scenario": "Current Trends", "pathway": "Current Trends" }, ... ],
+  "scenarios": [ { "scenario": "Current Trends", "pathway": "Current Trends",
+                  "levers": { "Diet": "NoChange", ... } }, ... ],   // levers: 1.2.0, optional
   "data":    Grid,   // Model, Scenario, Region, Variable, Unit, "2000", "2005", ...
   "mapping": Grid,   // variable, unit, source, note
   "notes":   ["..."]

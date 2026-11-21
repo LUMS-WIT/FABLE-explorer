@@ -84,6 +84,7 @@ def _load_previous(path: Optional[Path]) -> Optional[Bundle]:
             schema_version=raw.get("schema_version", "1.0.0"),
             generator=raw.get("generator", ""),
             iamc=raw.get("iamc"),
+            table_pathways=raw.get("table_pathways"),
         )
     except Exception:
         return None
@@ -135,6 +136,8 @@ def run_pipeline(
     pathway_slice: Optional[tuple[int, int]] = None,
     previous_bundle: Optional[Path] = None,
     iamc: Optional["IamcOptions"] = None,
+    design: Optional[Path] = None,
+    base_pathway: Optional[str] = None,
 ) -> tuple[Bundle, GateResult]:
     eng = get_engine(engine)
     output_root = output_root or (workbook_path.parent / "exports")
@@ -144,6 +147,8 @@ def run_pipeline(
         max_pathways=max_pathways,
         workers=workers,
         pathway_slice=pathway_slice,
+        design=design,
+        base_pathway=base_pathway,
     )
     return bundle_from_run_dir(
         run_dir,

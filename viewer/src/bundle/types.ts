@@ -54,6 +54,8 @@ export interface RunQuality {
 export interface IamcScenario {
   scenario: string;
   pathway: string;
+  /** scenario lever settings (schema 1.2.0), e.g. { Diet: "EATLancetAverage" } */
+  levers?: Record<string, string>;
 }
 
 // Optional since schema 1.1.0: results mapped to IAMC common-definitions.
@@ -80,6 +82,8 @@ export interface Bundle {
   deviation_summary: Grid;
   run_quality: RunQuality;
   iamc?: IamcSection;
+  /** large runs (1.2.0): pathways the raw tables and deviation ranking cover */
+  table_pathways?: string[];
 }
 
 export function major(version: string): number {

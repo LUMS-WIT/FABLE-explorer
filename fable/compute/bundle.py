@@ -79,7 +79,13 @@ def _classify_columns(df: pd.DataFrame, pathway_col: str):
     return year_col, dimension_cols, numeric_cols
 
 
-def _table_from_csv(path: Path) -> Optional[Table]:
+# Raw workbook tables grow by ~0.5 MB of JSON per pathway. Past this many
+# pathways the bundle carries raw tables (and the deviation ranking) for the
+# first ones only; the IAMC block always covers every pathway.
+MAX_TABLE_PATHWAYS = 25
+
+
+def _table_from_csv(path: Path, keep: Optional[set] = None) -> Optional[Table]:
     stem = path.name[: -len(COMBINED_SUFFIX)] if path.name.endswith(COMBINED_SUFFIX) else path.stem
     sheet, _, table = stem.partition("__")
     try:
@@ -92,6 +98,10 @@ def _table_from_csv(path: Path) -> Optional[Table]:
     pathway_col = detect_pathway_col(df.columns.tolist())
     if pathway_col is None:
         return None
+    if keep is not None:
+        df = df[df[pathway_col].astype(str).isin(keep)].reset_index(drop=True)
+        if df.empty:
+            return None
     year_col, dimension_cols, numeric_cols = _classify_columns(df, pathway_col)
     return Table(
         key=stem,
@@ -104,6 +114,32 @@ def _table_from_csv(path: Path) -> Optional[Table]:
         dimension_cols=dimension_cols,
         numeric_cols=numeric_cols,
     )
+
+
+def _all_pathways(csv_paths: List[Path], manifest: Optional[pd.DataFrame]) -> List[str]:
+    """Every pathway, in run order: the manifest, then any extra found in the tables."""
+    seen: List[str] = []
+    if manifest is not None and "Pathway" in manifest.columns:
+        for name in manifest["Pathway"].tolist():
+            name = str(name).strip()
+            if name and name not in seen:
+                seen.append(name)
+    have = set(seen)
+    for p in csv_paths:
+        try:
+            head = pd.read_csv(p, nrows=0).columns.tolist()
+            col = detect_pathway_col([str(c) for c in head])
+            if col is None:
+                continue
+            for name in pd.read_csv(p, usecols=[col])[col].astype(str).str.strip():
+                if name and name != "nan" and name not in have:
+                    have.add(name)
+                    seen.append(name)
+        except Exception:
+            continue
+        if manifest is not None:
+            break  # one table is enough to catch names missing from the manifest
+    return seen
 
 
 def _ordered_pathways(tables: List[Table], manifest: Optional[pd.DataFrame]) -> List[str]:
@@ -205,24 +241,33 @@ def build_bundle(
     baseline_pathway: Optional[str] = DEFAULT_BASELINE_PATHWAY,
     generator: str = "",
     regenerate_deviation: bool = True,
+    max_table_pathways: int = MAX_TABLE_PATHWAYS,
 ) -> Bundle:
     """Read ``run_dir`` and return a :class:`Bundle`. Never raises on bad data."""
     run_dir = Path(run_dir)
     combined_dir = run_dir / "combined_tables"
-
-    tables: List[Table] = []
-    for csv_path in sorted(combined_dir.glob(f"*{COMBINED_SUFFIX}")):
-        t = _table_from_csv(csv_path)
-        if t is not None:
-            tables.append(t)
+    csv_paths = sorted(combined_dir.glob(f"*{COMBINED_SUFFIX}"))
 
     manifest = _load_manifest(run_dir)
-    pathways = _ordered_pathways(tables, manifest)
+    pathways = _all_pathways(csv_paths, manifest)
     baseline = (
         choose_baseline_pathway(pathways, baseline_pathway)
         if pathways
         else (baseline_pathway or DEFAULT_BASELINE_PATHWAY)
     )
+
+    # large runs: raw tables for the baseline + the first pathways only
+    keep: Optional[set] = None
+    table_pathways: Optional[List[str]] = None
+    if len(pathways) > max_table_pathways:
+        table_pathways = [baseline] + [p for p in pathways if p != baseline][: max_table_pathways - 1]
+        keep = set(table_pathways)
+
+    tables: List[Table] = []
+    for csv_path in csv_paths:
+        t = _table_from_csv(csv_path, keep)
+        if t is not None:
+            tables.append(t)
 
     # deviation summary: regenerate from the combined CSVs (single source of
     # truth) and fall back to a pre-existing file, then to empty. Regeneration
@@ -235,11 +280,12 @@ def build_bundle(
                     combined_dir=combined_dir,
                     output_csv=Path(tmp.name),
                     baseline_pathway=baseline,
+                    pathways=table_pathways,
                 )
         except Exception:
             dev_df = None
     existing_dev = run_dir / DEVIATION_SUMMARY_FILE
-    if dev_df is None and existing_dev.exists():
+    if dev_df is None and keep is None and existing_dev.exists():
         try:
             dev_df = pd.read_csv(existing_dev)
         except Exception:
@@ -252,6 +298,12 @@ def build_bundle(
     if "SpreadAbs" in dev_df.columns:
         spread = pd.to_numeric(dev_df["SpreadAbs"], errors="coerce")
         dev_df = dev_df[~(spread == 0)].reset_index(drop=True)
+    # Per-pathway value/difference columns (3 per pathway) dominate a large
+    # bundle; the summary columns carry the ranking.
+    if table_pathways is not None:
+        per_path = [c for c in dev_df.columns
+                    if str(c).startswith(("Value__", "DiffVsBaseline__", "PctDiffVsBaseline__"))]
+        dev_df = dev_df.drop(columns=per_path)
     dev_df.columns = [str(c) for c in dev_df.columns]
     deviation_summary = Grid(
         columns=dev_df.columns.tolist(),
@@ -259,6 +311,11 @@ def build_bundle(
     )
 
     run_quality = _run_quality(manifest, pathways, tables, baseline)
+    if table_pathways is not None:
+        run_quality.checks.append(QualityCheck(
+            "tables_subset", True,
+            f"raw tables and deviation ranking cover {len(table_pathways)} of {len(pathways)} "
+            "pathways; the IAMC table covers all"))
 
     wb_path = Path(workbook_path) if workbook_path else None
     source = Source(
@@ -277,4 +334,5 @@ def build_bundle(
         deviation_summary=deviation_summary,
         run_quality=run_quality,
         generator=generator,
+        table_pathways=table_pathways,
     )

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bundle } from "./bundle/types";
 import {
   BundleError,
@@ -6,62 +6,83 @@ import {
   loadBundleFromFile,
   loadBundleFromUrl,
 } from "./bundle/load";
-import { fmtDate } from "./lib/format";
+import { indexIamc } from "./lib/iamc";
+import { HighlightContext, defaultHighlight, makeHighlight } from "./lib/highlight";
 import QualityBanner from "./components/QualityBanner";
 import Overview from "./components/Overview";
 import TableExplorer from "./components/TableExplorer";
 import DeviationAnalysis from "./components/DeviationAnalysis";
 import IamcExport from "./components/IamcExport";
 import Guide from "./components/Guide";
+import Summary from "./components/Summary";
+import Compare from "./components/Compare";
 
-type Tab = "overview" | "explore" | "deviation" | "iamc" | "guide";
-const TABS: { id: Tab; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "explore", label: "Table explorer" },
-  { id: "deviation", label: "Deviation analysis" },
-  { id: "iamc", label: "IAMC export" },
-  { id: "guide", label: "Guide" },
+type Tab = "summary" | "compare" | "iamc" | "explore" | "deviation" | "overview" | "guide";
+const TABS: { id: Tab; label: string; needsBundle: boolean }[] = [
+  { id: "summary", label: "Summary", needsBundle: true },
+  { id: "compare", label: "Compare pathways", needsBundle: true },
+  { id: "iamc", label: "IAMC data", needsBundle: true },
+  { id: "explore", label: "Workbook tables", needsBundle: true },
+  { id: "deviation", label: "Deviation ranking", needsBundle: true },
+  { id: "overview", label: "Run details", needsBundle: true },
+  { id: "guide", label: "Guide", needsBundle: false },
 ];
+
+function builtOn(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
 
 export default function App() {
   const [bundle, setBundle] = useState<Bundle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>("summary");
   const [dragging, setDragging] = useState(false);
+  const ix = useMemo(() => (bundle ? indexIamc(bundle) : null), [bundle]);
+  const [picked, setPicked] = useState<string[]>([]);
+  useEffect(() => setPicked(ix ? defaultHighlight(ix) : []), [ix]);
+  const highlight = useMemo(() => makeHighlight(picked, setPicked), [picked]);
+
+  const show = useCallback((b: Bundle) => {
+    setBundle(b);
+    setError(null);
+    setTab(b.iamc && b.iamc.data.rows.length ? "summary" : "overview");
+  }, []);
 
   useEffect(() => {
     loadBundleFromUrl(defaultBundleUrl())
-      .then((b) => {
-        setBundle(b);
-        setError(null);
-      })
+      .then(show)
       .catch((e) => setError(e instanceof BundleError ? e.message : String(e)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [show]);
 
   const openFile = useCallback(async (file: File) => {
     setLoading(true);
     try {
-      const b = await loadBundleFromFile(file);
-      setBundle(b);
-      setError(null);
-      setTab("overview");
+      show(await loadBundleFromFile(file));
     } catch (e) {
       setError(e instanceof BundleError ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [show]);
+
+  const tabs = TABS.filter((t) => bundle || !t.needsBundle);
 
   return (
+    <HighlightContext.Provider value={highlight}>
     <div
       className={`app ${dragging ? "dragging" : ""}`}
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);
       }}
-      onDragLeave={() => setDragging(false)}
+      onDragLeave={(e) => {
+        if (e.currentTarget === e.target) setDragging(false);
+      }}
       onDrop={(e) => {
         e.preventDefault();
         setDragging(false);
@@ -71,33 +92,37 @@ export default function App() {
     >
       <header className="topbar">
         <div className="brand">
-          <span className="logo">▚</span> FABLE Explorer
+          <span className="mark" aria-hidden>
+            <span /><span /><span />
+          </span>
+          <span className="wordmark">FABLE Explorer</span>
           {bundle && (
-            <span className="sub">
-              {bundle.source.country} · {bundle.pathways.length} pathways ·{" "}
-              {fmtDate(bundle.source.generated_at)}
+            <span className="run-line">
+              {bundle.source.country}, {bundle.pathways.length.toLocaleString("en-GB")} pathways, built {builtOn(bundle.source.generated_at)}
             </span>
           )}
         </div>
         <label className="file-btn">
-          Open bundle…
+          Open bundle
           <input
             type="file"
             accept="application/json,.json"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) void openFile(f);
+              e.target.value = "";
             }}
           />
         </label>
       </header>
 
       {(bundle || (!loading && error)) && (
-        <nav className="tabs">
-          {TABS.filter((t) => bundle || t.id === "guide").map((t) => (
+        <nav className="tabs" aria-label="Views">
+          {tabs.map((t) => (
             <button
               key={t.id}
               className={tab === t.id ? "tab-on" : ""}
+              aria-current={tab === t.id ? "page" : undefined}
               onClick={() => setTab(t.id)}
             >
               {t.label}
@@ -107,18 +132,17 @@ export default function App() {
       )}
 
       <main className="content">
-        {loading && <p className="muted">Loading bundle…</p>}
+        {loading && <p className="muted">Loading results</p>}
 
         {!loading && error && tab !== "guide" && (
-          <div className="card error">
-            <h3>Could not load a bundle</h3>
+          <section className="panel empty error">
+            <h2>No results loaded</h2>
             <p>{error}</p>
             <p className="muted">
-              Drop a <code>bundle.json</code> anywhere on this page, or use
-              “Open bundle…”. Generate one with{" "}
+              Drop a <code>bundle.json</code> anywhere on this page or use Open bundle. Build one with{" "}
               <code>python -m fable.compute bundle &lt;run_dir&gt;</code>.
             </p>
-          </div>
+          </section>
         )}
 
         {!loading && tab === "guide" && <Guide bundle={bundle} />}
@@ -127,15 +151,22 @@ export default function App() {
           // keyed on the bundle so every view resets when another file is opened
           <div key={`${bundle.source.run_id}|${bundle.source.generated_at}`}>
             <QualityBanner q={bundle.run_quality} />
-            {tab === "overview" && <Overview bundle={bundle} />}
+            {tab === "summary" && <Summary bundle={bundle} ix={ix} />}
+            {tab === "compare" && <Compare ix={ix} />}
+            {tab === "iamc" && <IamcExport bundle={bundle} />}
             {tab === "explore" && <TableExplorer bundle={bundle} />}
             {tab === "deviation" && <DeviationAnalysis bundle={bundle} />}
-            {tab === "iamc" && <IamcExport bundle={bundle} />}
+            {tab === "overview" && <Overview bundle={bundle} />}
           </div>
         )}
       </main>
 
-      {dragging && <div className="drop-hint">Drop bundle.json to load</div>}
+      <footer className="foot">
+        FABLE Explorer reads a <code>bundle.json</code> in your browser. Files you open stay on your computer.
+      </footer>
+
+      {dragging && <div className="drop-hint">Drop bundle.json to open it</div>}
     </div>
+    </HighlightContext.Provider>
   );
 }

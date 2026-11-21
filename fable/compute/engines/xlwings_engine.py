@@ -46,6 +46,13 @@ TABLE_OUTPUT_SHEETS = [
     "LAND", "WATER", "N and P", "BIODIVERSITY",
 ]
 DEVIATION_SUMMARY_FILE = "scenario_deviation_summary.csv"
+# Past this many pathways the per-pathway deviation summary gets too wide to be
+# useful; the IAMC export and the dashboard's ensemble views take over.
+DEVIATION_MAX_PATHWAYS = 60
+
+# (worksheet row, pathway name, lever values or None). Lever values are given
+# for design runs: they are written into that row before it is selected.
+Rep = Tuple[int, str, Optional[Tuple]]
 
 
 # --------------------------------------------------------------------------
@@ -61,41 +68,25 @@ class Plan:
     pathways: List[Tuple[int, str, Tuple[str, ...]]]
     # {(sheet, table_name): "A1:Z9"}
     table_ranges: Dict[Tuple[str, str], str] = field(default_factory=dict)
+    # design runs: lever columns + the spare table row the values are written to
+    name_col_idx: int = 0
+    lever_cols: List[int] = field(default_factory=list)
+    table: Optional[object] = None  # design.PathwayTable
 
 
 def _build_plan(workbook_path: Path) -> Plan:
     from openpyxl import load_workbook
-    from openpyxl.utils.cell import range_boundaries
 
-    wb = load_workbook(workbook_path, data_only=False, read_only=False)
+    from ..design import read_pathway_table
+
+    # data_only: lever option lists can be formulas; their saved values are what we need
+    wb = load_workbook(workbook_path, data_only=True, read_only=False)
     try:
-        ws = wb["PATHWAYS selection"]
-        if "PathwaysSelection" not in ws.tables:
-            raise ValueError("table 'PathwaysSelection' not found on 'PATHWAYS selection'")
-        ref = ws.tables["PathwaysSelection"]
-        ref = ref if isinstance(ref, str) else ref.ref
-        b = range_boundaries(ref)
-        min_col, min_row, max_col, max_row = (b[0] or 0), (b[1] or 0), (b[2] or 0), (b[3] or 0)
-
-        headers = [ws.cell(min_row, c).value for c in range(min_col, max_col + 1)]
-        norm = [str(h).strip().lower() if h is not None else "" for h in headers]
-        if "selection" not in norm or "pathway" not in norm:
-            raise ValueError("PathwaysSelection needs SELECTION and PATHWAY headers")
-        sel_idx = min_col + norm.index("selection")
-        path_idx = min_col + norm.index("pathway")
-        # scenario columns = every column after PATHWAY
-        scen_cols = [c for c in range(path_idx + 1, max_col + 1)]
-
+        table = read_pathway_table(workbook_path, wb=wb)
         pathways: List[Tuple[int, str, Tuple[str, ...]]] = []
-        for row in range(min_row + 1, max_row + 1):
-            name = ws.cell(row, path_idx).value
-            if name is None or str(name).strip() == "":
-                continue
-            scen = tuple(
-                "" if ws.cell(row, c).value is None else str(ws.cell(row, c).value).strip()
-                for c in scen_cols
-            )
-            pathways.append((row, str(name).strip(), scen))
+        for row_num, (_, rec) in zip(table.rows, table.pathways.iterrows()):
+            scen = tuple("" if rec[k] is None else str(rec[k]).strip() for k in table.keys)
+            pathways.append((row_num, rec["PATHWAY"], scen))
         if not pathways:
             raise ValueError("no pathway rows in PathwaysSelection")
 
@@ -108,11 +99,14 @@ def _build_plan(workbook_path: Path) -> Plan:
 
         return Plan(
             sheet_name="PATHWAYS selection",
-            selection_col_idx=sel_idx,
-            first_data_row=min_row + 1,
-            last_data_row=max_row,
+            selection_col_idx=table.selection_column,
+            first_data_row=table.first_row,
+            last_data_row=table.last_row,
             pathways=pathways,
             table_ranges=ranges,
+            name_col_idx=table.name_column,
+            lever_cols=[lv.column for lv in table.levers],
+            table=table,
         )
     finally:
         wb.close()
@@ -165,7 +159,7 @@ def _run_shard(
     workbook_str: str,
     run_dir_str: str,
     plan: Plan,
-    reps: List[Tuple[int, str]],
+    reps: List[Rep],
     excel_visible: bool,
     _progress: Optional[ProgressCallback] = None,
 ) -> List[dict]:
@@ -200,7 +194,11 @@ def _run_shard(
         col_letter = get_column_letter(plan.selection_col_idx)
         clear_range = f"{col_letter}{plan.first_data_row}:{col_letter}{plan.last_data_row}"
 
-        for i, (row_num, pathway) in enumerate(reps, 1):
+        lever_range = None
+        if plan.lever_cols and plan.lever_cols == list(range(plan.lever_cols[0], plan.lever_cols[-1] + 1)):
+            lever_range = (get_column_letter(plan.lever_cols[0]), get_column_letter(plan.lever_cols[-1]))
+
+        for i, (row_num, pathway, levers) in enumerate(reps, 1):
             if _progress:
                 try:
                     _progress(i, len(reps), pathway, "running")
@@ -217,6 +215,13 @@ def _run_shard(
 
             try:
                 sheet.range(clear_range).value = None
+                if levers is not None:  # design run: put this pathway's settings in the spare row
+                    if lever_range:
+                        sheet.range(f"{lever_range[0]}{row_num}:{lever_range[1]}{row_num}").value = [list(levers)]
+                    else:
+                        for col, val in zip(plan.lever_cols, levers):
+                            sheet.cells(row_num, col).value = val
+                    sheet.cells(row_num, plan.name_col_idx).value = pathway
                 sheet.cells(row_num, plan.selection_col_idx).value = "x"
                 app.calculate()
 
@@ -248,7 +253,7 @@ def _run_shard(
     return manifest
 
 
-def _shards(reps: List[Tuple[int, str]], workers: int) -> List[List[Tuple[int, str]]]:
+def _shards(reps: List[Rep], workers: int) -> List[List[Rep]]:
     workers = max(1, min(workers, len(reps)))
     size = math.ceil(len(reps) / workers)
     return [reps[i : i + size] for i in range(0, len(reps), size)]
@@ -316,6 +321,8 @@ class XlwingsEngine:
         excel_visible: bool = False,
         run_dir: Optional[Path] = None,
         progress_callback: Optional[ProgressCallback] = None,
+        design: Optional[Path] = None,
+        base_pathway: Optional[str] = None,
     ) -> Path:
         ok, why = self.available()
         if not ok:
@@ -327,6 +334,14 @@ class XlwingsEngine:
 
         plan = _build_plan(workbook_path)
         selected = plan.pathways
+        if design is not None:
+            from ..design import load_design
+
+            # every design row is written into the last row of the pathway table
+            selected = [
+                (plan.last_data_row, name, vals)
+                for name, vals in load_design(Path(design), plan.table, base=base_pathway)
+            ]
         if pathway_slice:
             selected = selected[pathway_slice[0] : pathway_slice[1]]
         if max_pathways:
@@ -342,15 +357,19 @@ class XlwingsEngine:
         run_dir.mkdir(parents=True, exist_ok=True)
 
         # dedupe by scenario tuple -> groups of pathway names
-        by_scen: Dict[Tuple[str, ...], List[Tuple[int, str]]] = {}
+        by_scen: Dict[Tuple, List[Tuple[int, str]]] = {}
         for row_num, name, scen in selected:
             by_scen.setdefault(scen, []).append((row_num, name))
         groups = [[name for _, name in members] for members in by_scen.values()]
-        reps = [members[0] for members in by_scen.values()]
+        reps: List[Rep] = [
+            (members[0][0], members[0][1], scen if design is not None else None)
+            for scen, members in by_scen.items()
+        ]
 
         print(
             f"Workbook : {workbook_path.name}\n"
-            f"Pathways : {len(selected)} selected, {len(reps)} unique scenario tuple(s)\n"
+            f"Pathways : {len(selected)} selected{' from ' + Path(design).name if design else ''}, "
+            f"{len(reps)} unique scenario tuple(s)\n"
             f"Tables   : {len(plan.table_ranges)}\n"
             f"Workers  : {workers}\n"
             f"Outputs  : {run_dir}",
@@ -397,14 +416,18 @@ class XlwingsEngine:
                     "Seconds": base["Seconds"],
                 })
         pd.DataFrame(full_manifest).to_csv(run_dir / "run_manifest.csv", index=False)
+        from ..design import write_levers
 
-        try:
-            export_scenario_deviation_summary(
-                combined_dir=run_dir / "combined_tables",
-                output_csv=run_dir / DEVIATION_SUMMARY_FILE,
-            )
-        except Exception as exc:  # pragma: no cover
-            print(f"warning: deviation summary failed: {exc}", flush=True)
+        write_levers(run_dir, [(name, scen) for _, name, scen in selected], plan.table)
+
+        if len(selected) <= DEVIATION_MAX_PATHWAYS:
+            try:
+                export_scenario_deviation_summary(
+                    combined_dir=run_dir / "combined_tables",
+                    output_csv=run_dir / DEVIATION_SUMMARY_FILE,
+                )
+            except Exception as exc:  # pragma: no cover
+                print(f"warning: deviation summary failed: {exc}", flush=True)
 
         if progress_callback:
             progress_callback(len(reps), len(reps), "Done", "done")

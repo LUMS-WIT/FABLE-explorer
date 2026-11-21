@@ -71,6 +71,8 @@ class LibreOfficeEngine:
         excel_visible: bool = False,
         run_dir: Optional[Path] = None,
         progress_callback: Optional[ProgressCallback] = None,
+        design: Optional[Path] = None,
+        base_pathway: Optional[str] = None,
     ) -> Path:
         raise EngineUnavailable(
             "LibreOffice engine is not implemented yet. Use the xlwings engine, "

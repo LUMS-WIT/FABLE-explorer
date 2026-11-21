@@ -173,7 +173,10 @@ def export_scenario_deviation_summary(
     default_abs_threshold: float = 0.0,
     default_pct_threshold: float = 15.0,
     metric_thresholds: Optional[Dict[str, Dict[str, float]]] = None,
+    pathways: Optional[Sequence[str]] = None,
 ) -> pd.DataFrame:
+    """``pathways``: restrict the comparison to these pathways (large runs)."""
+    keep = set(pathways) if pathways is not None else None
     table_paths = sorted(combined_dir.glob("*.csv"))
     summary_frames: List[pd.DataFrame] = []
 
@@ -186,6 +189,10 @@ def export_scenario_deviation_summary(
         pathway_col = detect_pathway_col(df.columns.tolist())
         if pathway_col is None:
             continue
+        if keep is not None:
+            df = df[df[pathway_col].astype(str).isin(keep)].reset_index(drop=True)
+            if df.empty:
+                continue
 
         year_col = detect_year_col(df.columns.tolist())
         dimension_cols = [
@@ -339,16 +346,15 @@ def export_scenario_deviation_summary(
             out["PctDeviationThreshold"] = pct_thr
             out["SignificantDeviation"] = significant
 
+            # add the per-pathway columns in one go (column-by-column inserts
+            # fragment the frame and get slow with many pathways)
+            per_path = {}
             for pathway_name in expected_pathways:
                 column_name = safe_name(pathway_name)
-                out[f"Value__{column_name}"] = pd.to_numeric(
-                    pivot[pathway_name],
-                    errors="coerce",
-                )
-                out[f"DiffVsBaseline__{column_name}"] = diff_vs_baseline[pathway_name]
-                out[f"PctDiffVsBaseline__{column_name}"] = pct_diff_vs_baseline[
-                    pathway_name
-                ]
+                per_path[f"Value__{column_name}"] = pd.to_numeric(pivot[pathway_name], errors="coerce")
+                per_path[f"DiffVsBaseline__{column_name}"] = diff_vs_baseline[pathway_name]
+                per_path[f"PctDiffVsBaseline__{column_name}"] = pct_diff_vs_baseline[pathway_name]
+            out = pd.concat([out, pd.DataFrame(per_path, index=out.index)], axis=1)
 
             summary_frames.append(out)
 

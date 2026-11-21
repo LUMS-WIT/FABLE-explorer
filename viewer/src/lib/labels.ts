@@ -100,13 +100,13 @@ export function prettyLabel(raw: string | null | undefined): string {
   return out;
 }
 
-// "GHG__ResultsGHG" -> "GHG · Results"
+// "GHG__ResultsGHG" -> "GHG: Results"
 export function prettyTableKey(key: string): string {
   const [sheet, table] = key.split("__");
   const left = prettyLabel(sheet ?? key);
   let right = prettyLabel((table ?? "").replace(/^Results?/i, "Results "));
   right = right.replace(/^Results\s+/i, "").trim();
   return right && right.toLowerCase() !== left.toLowerCase()
-    ? `${left} · ${right}`
+    ? `${left}: ${right}`
     : left;
 }

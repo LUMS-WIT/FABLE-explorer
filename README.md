@@ -1,5 +1,7 @@
 # FABLE Explorer
 
+**Live dashboard:** https://lums-wit.github.io/FABLE-explorer/
+
 Post-processing and a web viewer for any [FABLE](https://fableconsortium.org)
 country workbook. Runs every pathway (scenario) in the Excel model, compares
 each against a baseline, and turns the result into an interactive site.
@@ -69,6 +71,36 @@ python -m fable.compute iamc exports/all_pathways_run_XXXX --model "FABLE-YourCo
 python -m fable.compute view
 ```
 
+### Running hundreds or thousands of pathways
+
+The workbook's own pathway table holds a handful of rows. For more, write a
+**pathway design**: a CSV with one row per pathway and one column per scenario
+lever (Diet, Land, Afforestation, Livestock, ...). The tool writes each row into
+a spare row of its private workbook copy, so you never edit the workbook.
+
+```bash
+python -m fable.compute pathways levers                     # every lever and its allowed options
+python -m fable.compute pathways template -o design.csv     # the workbook's pathways, to edit by hand
+python -m fable.compute pathways sample -n 1000 --vary Diet,Land,Afforestation,Livestock,Crop -o design.csv
+python -m fable.compute pathways factorial --vary Diet,Land,Afforestation -o design.csv   # all 48 combinations
+python -m fable.compute pathways check --design design.csv  # validate before a long run
+
+python -m fable.compute run --design design.csv --workers 8 --model "FABLE-Pakistan v1"
+```
+
+Levers you leave out of the design keep the value of the base pathway
+(`--base-pathway`, default the first). Reporting settings (BaseYear, GWP, Price)
+are never varied unless you name them. Identical combinations are computed once;
+a killed run resumes where it stopped; `--pathway-slice A:B` splits a run across
+machines.
+
+For large runs the dashboard switches to an ensemble view: every pathway as a
+grey distribution, up to seven chosen pathways in colour, and a panel showing
+which lever settings move each indicator. The IAMC files carry every pathway,
+with its lever settings as columns of the `meta` sheet. The bundle keeps raw
+workbook tables for the first 25 pathways only, so it stays a manageable size
+(1,000 pathways: about 27 MB, 4 MB as served compressed).
+
 Outputs:
 
 | File | What it is |
@@ -95,13 +127,20 @@ It loads the committed `viewer/public/data/bundle.json`. You can also **drag any
 
 Tabs:
 
-| Tab | Works with any FABLE workbook | Shows |
-| --- | --- | --- |
-| Overview | yes | source info, pathway list, run-quality banner, table inventory |
-| Table explorer | yes | any output table × chosen pathways; raw / Δ / % Δ vs baseline; chart + grid |
-| Deviation analysis | yes | pathways ranked by divergence from the baseline |
-| IAMC export | yes | the results as IAMC common-definitions variables; chart, table, CSV downloads |
-| Guide | yes | how to use the site, the IAMC conventions, and how to build a bundle |
+| Tab | Shows |
+| --- | --- |
+| Summary | where each pathway lands on the headline indicators (dot strip), statements of what stands out, a scorecard |
+| Compare pathways | any IAMC variable: ranked bars for one year, trajectories, composition of a total, two pathways head to head |
+| IAMC data | the IAMC table with charts, variable mapping and CSV downloads |
+| Workbook tables | any raw output table × chosen pathways; raw / Δ / % Δ vs baseline |
+| Deviation ranking | workbook metrics ranked by divergence from the baseline |
+| Run details | source info, pathway list, table inventory |
+| Guide | how to use the site, the IAMC conventions, and how to build a bundle |
+
+All tabs work with any FABLE country workbook. Summary, Compare and IAMC data
+need a bundle with the IAMC block (schema 1.1.0+). Pathway colours follow the
+IPCC AR6 scenario palette, checked for colour-blind separation in light and dark
+mode.
 
 Workbook column names (`TotalCO2e`, `LNPPMatureForest`, …) are humanised in
 chart titles and legends; hover shows the original.

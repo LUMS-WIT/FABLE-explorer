@@ -2,6 +2,10 @@ import { useMemo, useState } from "react";
 import { Bundle } from "../bundle/types";
 import { BaselineMode, Row, buildSeries, num, toObjects, uniqueStrings } from "../lib/table";
 
+function tablePathways(bundle: Bundle): string[] {
+  return bundle.table_pathways ?? bundle.pathways;
+}
+
 // First metric whose values actually vary, so the opening chart is not flat.
 function defaultMetric(rows: Row[], cols: string[]): string {
   for (const c of cols) {
@@ -38,7 +42,7 @@ export default function TableExplorer({ bundle }: { bundle: Bundle }) {
   const table = bundle.tables.find((t) => t.key === tableKey) ?? bundle.tables[0];
 
   const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(bundle.pathways),
+    () => new Set(tablePathways(bundle)),
   );
   const [baseline, setBaseline] = useState(bundle.baseline_pathway);
   const [mode, setMode] = useState<BaselineMode>("raw");
@@ -82,16 +86,16 @@ export default function TableExplorer({ bundle }: { bundle: Bundle }) {
   const series = useMemo(() => {
     if (!table || !effMetric) return [];
     return buildSeries(table, effMetric, {
-      pathways: bundle.pathways.filter((p) => selected.has(p)),
+      pathways: tablePathways(bundle).filter((p) => selected.has(p)),
       xCol,
       baseline,
       mode,
       filters: effFilter,
     });
-  }, [table, effMetric, bundle.pathways, selected, xCol, baseline, mode, effFilter]);
+  }, [table, effMetric, bundle, selected, xCol, baseline, mode, effFilter]);
 
   const chartData = series.map((s) => {
-    const idx = bundle.pathways.indexOf(s.pathway);
+    const idx = tablePathways(bundle).indexOf(s.pathway);
     return {
       type: "scatter" as const,
       mode: "lines+markers" as const,
@@ -107,8 +111,8 @@ export default function TableExplorer({ bundle }: { bundle: Bundle }) {
     mode === "raw"
       ? prettyLabel(effMetric)
       : mode === "delta"
-        ? `${prettyLabel(effMetric)} — Δ vs ${baseline}`
-        : `${prettyLabel(effMetric)} — % Δ vs ${baseline}`;
+        ? `${prettyLabel(effMetric)}, change vs ${baseline}`
+        : `${prettyLabel(effMetric)}, % change vs ${baseline}`;
 
   if (!table) return <p>No tables in this bundle.</p>;
 
@@ -156,7 +160,7 @@ export default function TableExplorer({ bundle }: { bundle: Bundle }) {
       </div>
 
       <PathwayPicker
-        pathways={bundle.pathways}
+        pathways={tablePathways(bundle)}
         selected={selected}
         onToggle={(p) =>
           setSelected((s) => {
@@ -174,7 +178,7 @@ export default function TableExplorer({ bundle }: { bundle: Bundle }) {
       <div className="card">
         <Chart
           data={chartData}
-          title={`${prettyTableKey(table.key)} — ${prettyLabel(effMetric)}${dimChoices.length ? ` (${dimChoices.map((c) => c.value).join(", ")})` : ""}`}
+          title={`${prettyTableKey(table.key)}: ${prettyLabel(effMetric)}${dimChoices.length ? ` (${dimChoices.map((c) => c.value).join(", ")})` : ""}`}
           xTitle={prettyLabel(xCol)}
           yTitle={yTitle}
         />

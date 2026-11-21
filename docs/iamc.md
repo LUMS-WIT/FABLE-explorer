@@ -41,7 +41,7 @@ result message shows where the IAMC files went.
 | Column | Rule |
 | --- | --- |
 | Model | `--model`, else `iamc.model` in `config.yaml`, else you are asked (terminal only), else `FABLE-<country>`. Put a version in the name if you want one, e.g. `FABLE-Pakistan v1`. `--no-input` turns the question off (CI). |
-| Scenario | FABLE pathway name as-is. Rename with `iamc.scenario_names` in `config.yaml`. |
+| Scenario | FABLE pathway name as-is. Rename with `iamc.scenario_names` in `config.yaml`. For design runs the `meta` sheet also lists each scenario's lever settings (Diet, Land, ...), ready to use as pyam meta indicators. |
 | Region | `iamc.region`, else `country`. Use the common-definitions country name, e.g. `Pakistan`. |
 
 ## What is mapped (91 variables)

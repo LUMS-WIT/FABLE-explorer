@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/FABLE-Consortium/FABLE_Pakistan/fable/contract/bundle.schema.json",
+  "$id": "https://github.com/LUMS-WIT/FABLE-explorer/fable/contract/bundle.schema.json",
   "title": "FABLE results bundle",
   "description": "The only stable interface between the compute layer and the viewer. Bump the MAJOR of schema_version for any breaking change; the viewer refuses an unknown major.",
   "type": "object",
@@ -92,6 +92,13 @@
     },
     "iamc": {
       "$ref": "#/$defs/iamc"
+    },
+    "table_pathways": {
+      "description": "Large runs (1.2.0): the pathways the raw tables and deviation ranking were limited to. Absent when tables cover every pathway.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "$defs": {
@@ -314,6 +321,13 @@
               },
               "pathway": {
                 "type": "string"
+              },
+              "levers": {
+                "description": "Scenario lever settings of this pathway (1.2.0), e.g. {\"Diet\": \"EATLancetAverage\"}",
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
               }
             }
           }

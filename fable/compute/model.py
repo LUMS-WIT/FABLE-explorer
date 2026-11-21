@@ -23,17 +23,24 @@ Scalar = Optional[Any]  # str | int | float | bool | None after cleaning
 
 
 def _clean(value: Any) -> Scalar:
-    """Coerce a single cell to a JSON-safe scalar (NaN/Inf -> None)."""
+    """Coerce a single cell to a JSON-safe scalar (NaN/Inf -> None).
+
+    Floats keep 6 significant figures: far beyond what the viewer shows, and it
+    roughly halves the size of a large bundle. CSV and IAMC files on disk keep
+    full precision.
+    """
     if value is None:
         return None
     if isinstance(value, float):
-        return value if math.isfinite(value) else None
+        return float(f"{value:.6g}") if math.isfinite(value) else None
     if isinstance(value, (str, int, bool)):
         return value
     # numpy scalars, Timestamps, etc.
     try:
+        if isinstance(value, (int,)) or type(value).__name__.startswith("int"):
+            return int(value)
         f = float(value)
-        return f if math.isfinite(f) else None
+        return float(f"{f:.6g}") if math.isfinite(f) else None
     except (TypeError, ValueError):
         s = str(value)
         return s if s and s.lower() != "nan" else None
@@ -131,6 +138,8 @@ class Bundle:
     generator: str = ""
     # Optional IAMC-format view of the results (schema >= 1.1.0); see fable/iamc.
     iamc: Optional[Dict[str, Any]] = None
+    # Large runs (schema >= 1.2.0): pathways the raw tables were cut down to.
+    table_pathways: Optional[List[str]] = None
 
     # ---- serialisation -------------------------------------------------
     def to_dict(self) -> Dict[str, Any]:
@@ -146,6 +155,8 @@ class Bundle:
             "deviation_summary": d["deviation_summary"],
             "run_quality": d["run_quality"],
         }
+        if self.table_pathways is not None:
+            out["table_pathways"] = self.table_pathways
         if self.iamc is not None:
             out["iamc"] = self.iamc
         return out

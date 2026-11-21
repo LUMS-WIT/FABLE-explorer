@@ -26,11 +26,20 @@ export default function Guide({ bundle }: { bundle: Bundle | null }) {
           <li>The site opens with the bundle published alongside it.</li>
           <li>
             To look at another run, drag its <code>bundle.json</code> onto the page, or use{" "}
-            <strong>Open bundle…</strong> at the top right. The file stays on your computer.
+            <strong>Open bundle</strong> at the top right. The file stays on your computer.
           </li>
           <li>
-            Bundles from older versions of the tool still open. Only the IAMC tab needs a
-            bundle built with schema 1.1.0 or later.
+            Bundles from older versions of the tool still open. Summary, Compare pathways and
+            IAMC data need a bundle built with schema 1.1.0 or later.
+          </li>
+          <li>
+            Runs with more than seven pathways open in ensemble view. Grey shows every pathway; you
+            choose up to seven to colour, by name or with the quick picks (lowest emissions, most
+            food and so on). Design runs also show which lever settings move each indicator.
+          </li>
+          <li>
+            Pathway colours follow the IPCC AR6 scenario palette and stay fixed per pathway on
+            every chart. Each chart also has a legend or labels, so colour is never the only cue.
           </li>
         </ul>
       </section>
@@ -38,21 +47,27 @@ export default function Guide({ bundle }: { bundle: Bundle | null }) {
       <section className="card">
         <h3>Tabs</h3>
         <dl className="kv">
-          <dt>Overview</dt>
+          <dt>Summary</dt>
+          <dd>
+            Where every pathway lands on the headline indicators in a chosen year, a few plain
+            the main findings in plain sentences, and a scorecard of the numbers. Needs the IAMC table.
+          </dd>
+          <dt>Compare pathways</dt>
+          <dd>
+            Any IAMC variable: pathways ranked in one year, the trajectory over time, what a total
+            is made of (for example land cover by type), and two pathways side by side.
+          </dd>
+          <dt>IAMC data</dt>
+          <dd>The IAMC table itself, with charts, the variable mapping and CSV downloads.</dd>
+          <dt>Workbook tables</dt>
+          <dd>
+            Any raw output table of the workbook for the chosen pathways, as values or as the
+            difference from the baseline. Tables with a product or group dimension show a selector.
+          </dd>
+          <dt>Deviation ranking</dt>
+          <dd>Every workbook metric ranked by how far pathways move away from the baseline.</dd>
+          <dt>Run details</dt>
           <dd>Workbook, run, pathways, baseline and the list of output tables.</dd>
-          <dt>Table explorer</dt>
-          <dd>
-            Any output table for the chosen pathways, as values or as the difference from
-            the baseline (absolute or %). Tables with a product or group dimension show a
-            selector for it.
-          </dd>
-          <dt>Deviation analysis</dt>
-          <dd>Every metric ranked by how far each pathway moves away from the baseline.</dd>
-          <dt>IAMC export</dt>
-          <dd>
-            The same results in IAMC format (common-definitions variables and units), with
-            charts and CSV downloads.
-          </dd>
         </dl>
       </section>
 

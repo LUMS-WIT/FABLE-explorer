@@ -6,8 +6,8 @@ export default function QualityBanner({ q }: { q: RunQuality }) {
   return (
     <div className={`banner banner-${q.status}`}>
       <strong>
-        {q.status === "failed" ? "Run failed" : "Partial run"} —{" "}
-        {q.pathways_ok}/{q.pathways_expected} pathways succeeded
+        {q.status === "failed" ? "Run failed" : "Partial run"}:{" "}
+        {q.pathways_ok} of {q.pathways_expected} pathways succeeded
       </strong>
       {q.failures.length > 0 && (
         <ul>
@@ -23,7 +23,7 @@ export default function QualityBanner({ q }: { q: RunQuality }) {
           {failedChecks.map((c) => (
             <li key={c.name}>
               {c.name}
-              {c.detail ? ` — ${c.detail}` : ""}
+              {c.detail ? `: ${c.detail}` : ""}
             </li>
           ))}
         </ul>

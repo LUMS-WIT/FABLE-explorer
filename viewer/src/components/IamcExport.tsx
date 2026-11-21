@@ -6,7 +6,8 @@ import { useMemo, useState } from "react";
 import { Bundle, IamcSection, Scalar } from "../bundle/types";
 import { BaselineMode, Row, num, toObjects } from "../lib/table";
 import { downloadText, safeFilename, toCsv } from "../lib/download";
-import Chart, { seriesColor } from "./Chart";
+import Chart from "./Chart";
+import { useHighlight } from "../lib/highlight";
 import DataGrid from "./DataGrid";
 import PathwayPicker from "./PathwayPicker";
 
@@ -62,7 +63,10 @@ function IamcView({ bundle, iamc }: { bundle: Bundle; iamc: IamcSection }) {
 
   const baselineScenario =
     iamc.scenarios.find((s) => s.pathway === bundle.baseline_pathway)?.scenario ?? scenarios[0];
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(scenarios));
+  const hl = useHighlight();
+  // large runs: chart only the coloured (chosen) pathways
+  const chartable = scenarios.length > 7 ? scenarios.filter((s) => hl.has(s)) : scenarios;
+  const [selected, setSelected] = useState<Set<string>>(() => new Set(chartable));
   const [baseline, setBaseline] = useState(baselineScenario);
   const [mode, setMode] = useState<BaselineMode>("raw");
 
@@ -90,11 +94,11 @@ function IamcView({ bundle, iamc }: { bundle: Bundle; iamc: IamcSection }) {
           x,
           y,
           connectgaps: false,
-          line: { color: seriesColor(scenarios.indexOf(s)), width: 2 },
+          line: { color: hl.colorOf(s), width: 2 },
           marker: { size: 5 },
         };
       });
-  }, [rows, effVar, scenarios, selected, baseline, mode, years]);
+  }, [rows, effVar, scenarios, selected, baseline, mode, years, hl]);
 
   const yTitle =
     mode === "raw" ? unit : mode === "delta" ? `Δ vs ${baseline} (${unit})` : `% Δ vs ${baseline}`;
@@ -165,7 +169,7 @@ function IamcView({ bundle, iamc }: { bundle: Bundle; iamc: IamcSection }) {
       </div>
 
       <PathwayPicker
-        pathways={scenarios}
+        pathways={chartable}
         selected={selected}
         onToggle={(p) =>
           setSelected((s) => {

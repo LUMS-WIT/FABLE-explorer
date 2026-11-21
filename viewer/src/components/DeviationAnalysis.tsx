@@ -44,7 +44,7 @@ export default function DeviationAnalysis({ bundle }: { bundle: Bundle }) {
         .map(
           (r) =>
             `${prettyLabel(String(r.Metric))}${
-              r.Group && r.Group !== "(all rows)" ? ` · ${r.Group}` : ""
+              r.Group && r.Group !== "(all rows)" ? ` (${r.Group})` : ""
             }`,
         )
         .reverse(),

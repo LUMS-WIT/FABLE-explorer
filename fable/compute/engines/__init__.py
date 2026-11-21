@@ -47,10 +47,14 @@ class RecalcEngine(Protocol):
         excel_visible: bool = False,
         run_dir: Optional[Path] = None,
         progress_callback: Optional[ProgressCallback] = None,
+        design: Optional[Path] = None,
+        base_pathway: Optional[str] = None,
     ) -> Path:
         """Recalc every selected pathway; return the CSV run directory.
 
         ``workers``        parallel spreadsheet processes (engine may ignore).
+        ``design``         CSV of pathways (PATHWAY + lever columns) to run instead
+                           of the workbook's own pathway table; see fable.compute.design.
         ``pathway_slice``  ``(start, stop)`` index range for multi-machine sharding.
         ``run_dir``        reuse/resume an existing run directory.
         """
