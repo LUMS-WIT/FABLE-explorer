@@ -89,13 +89,16 @@ See [`fable/README.md`](../fable/README.md#scaling-to-hundreds-of-pathways).
 
 ## Base path / custom domain
 
-`viewer/vite.config.ts` defaults `base` to `/FABLE_Pakistan/` (project site at
-`https://<user>.github.io/FABLE_Pakistan/`).
+The live site is **https://lums-wit.github.io/FABLE-explorer/**, deployed from
+`main` of `LUMS-WIT/FABLE-explorer` by `deploy-pages.yml` on every push that
+touches `viewer/`.
 
-* **User/org site** (`<user>.github.io`) or **custom domain:** run
-  **Deploy viewer** manually with `base_path = /`, or set `VITE_BASE=/` and
-  commit a change to `vite.config.ts`.
-* Add a `viewer/public/CNAME` file for a custom domain.
+`viewer/vite.config.ts` defaults `base` to `./` (relative), so the same build
+works at any path. The deploy workflow passes `/<repo>/` explicitly.
+
+* **Custom domain** (e.g. `fable.<your-domain>`): add a `viewer/public/CNAME`
+  file containing the domain, add a CNAME DNS record pointing to
+  `lums-wit.github.io`, and set the domain under Settings → Pages.
 
 ---
 
@@ -104,7 +107,9 @@ See [`fable/README.md`](../fable/README.md#scaling-to-hundreds-of-pathways).
 ```bash
 cd viewer
 npm ci
-npm run build && npm run preview   # http://localhost:4173/FABLE_Pakistan/
+npm run build && npm run preview   # http://localhost:4173/
+# or, with the latest bundle from viewer/public/data:
+python -m fable.compute view       # http://127.0.0.1:8765
 ```
 
 ## Workflows at a glance

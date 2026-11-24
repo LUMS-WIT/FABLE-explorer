@@ -45,7 +45,8 @@ dev = [
 fable-compute = "fable.compute.cli:main"
 
 [project.urls]
-Repository = "https://github.com/FABLE-Consortium/FABLE_Pakistan"
+Repository = "https://github.com/LUMS-WIT/FABLE-explorer"
+Homepage = "https://lums-wit.github.io/FABLE-explorer/"
 
 [tool.setuptools]
 packages = ["fable", "fable.compute", "fable.compute.engines", "fable.iamc"]
